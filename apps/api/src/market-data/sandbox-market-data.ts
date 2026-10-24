@@ -24,17 +24,23 @@ function hash32(s: string): number {
   return h >>> 0;
 }
 
-/** Smooth deterministic price path: sum of sinusoids with symbol-specific phases plus minute-level jitter. */
+/**
+ * Smooth deterministic price path: incommensurate sinusoids with amplitude falling with period (so daily
+ * or weekly sampling never aliases into a sawtooth), plus a tiny per-minute jitter for live-looking quotes.
+ */
 export function sandboxPrice(symbol: string, atMs: number): number {
   const base = SANDBOX_BASE_PRICES[symbol.replace('.', '_')] ?? 50 + (hash32(symbol) % 200);
   const seed = hash32(symbol);
+  const phase = (k: number) => (((seed >>> (k * 5)) % 997) / 997) * Math.PI * 2;
   const days = atMs / 86_400_000;
-  const p1 = ((seed % 1000) / 1000) * Math.PI * 2;
-  const p2 = (((seed >>> 10) % 1000) / 1000) * Math.PI * 2;
-  const p3 = (((seed >>> 20) % 1000) / 1000) * Math.PI * 2;
-  const drift = 0.12 * Math.sin(days / 180 + p1) + 0.05 * Math.sin(days / 23 + p2) + 0.015 * Math.sin(days * 4 + p3);
+  const drift =
+    0.11 * Math.sin(days / 120 + phase(0)) +
+    0.045 * Math.sin(days / 31 + phase(1)) +
+    0.016 * Math.sin(days / 7.3 + phase(2)) +
+    0.005 * Math.sin(days / 1.9 + phase(3)) +
+    0.0025 * Math.sin((atMs / 60_000) / 37 + phase(4));
   const minute = Math.floor(atMs / 60_000);
-  const jitter = ((hash32(`${symbol}:${minute}`) % 1000) / 1000 - 0.5) * 0.004;
+  const jitter = ((hash32(`${symbol}:${minute}`) % 1000) / 1000 - 0.5) * 0.0012;
   return Math.max(1, base * (1 + drift + jitter));
 }
 

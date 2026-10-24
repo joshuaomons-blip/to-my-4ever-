@@ -25,10 +25,10 @@ export class ActivityController {
   async activity(@Auth() a: AuthContext, @Query('before') before?: string, @Query('limit') limit = '50') {
     const rows = await this.db.query<{ id: string; kind: string; description: string; created_at: Date; reference_type: string | null; reference_id: string | null; currency: string; available: string; pending: string; held: string; unsettled: string }>(
       `SELECT j.id, j.kind, j.description, j.created_at, j.reference_type, j.reference_id, p.currency,
-              -sum(p.amount_minor) FILTER (WHERE la.type = 'customer_available')::text AS available,
-              -sum(p.amount_minor) FILTER (WHERE la.type = 'customer_pending')::text AS pending,
-              -sum(p.amount_minor) FILTER (WHERE la.type = 'customer_held')::text AS held,
-              -sum(p.amount_minor) FILTER (WHERE la.type = 'customer_unsettled')::text AS unsettled
+              (-sum(p.amount_minor) FILTER (WHERE la.type = 'customer_available'))::text AS available,
+              (-sum(p.amount_minor) FILTER (WHERE la.type = 'customer_pending'))::text AS pending,
+              (-sum(p.amount_minor) FILTER (WHERE la.type = 'customer_held'))::text AS held,
+              (-sum(p.amount_minor) FILTER (WHERE la.type = 'customer_unsettled'))::text AS unsettled
          FROM journal_entries j
          JOIN ledger_postings p ON p.journal_entry_id = j.id
          JOIN ledger_accounts la ON la.id = p.ledger_account_id
