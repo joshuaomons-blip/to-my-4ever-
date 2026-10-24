@@ -1,5 +1,3 @@
-# Netlify: customer web app (Next.js) + API as Netlify Functions + Netlify Database (Postgres).
-# SANDBOX hosting profile — see docs/operations/netlify-sandbox.md for what differs from production.
 [build]
   base = "apps/web"
   command = "pnpm --filter @aureon/api build && pnpm --filter @aureon/api bundle:serverless && pnpm build"
@@ -9,7 +7,12 @@
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
 
+# Serves the Next.js app (SSR + prerendered pages) on Netlify.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [functions]
   directory = "netlify/functions"
-  # Trace files instead of bundling: NestJS relies on decorator metadata and optional requires.
   node_bundler = "nft"
+  # Native password-hashing binding: shipped as files, not bundled.
+  external_node_modules = ["@node-rs/argon2", "@node-rs/argon2-linux-x64-gnu"]

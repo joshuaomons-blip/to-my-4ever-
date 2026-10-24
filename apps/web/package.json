@@ -21,11 +21,15 @@
     "react-dom": "19.1.1"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "5.16.2",
     "@tailwindcss/postcss": "4.1.18",
     "@types/node": "22.18.0",
     "@types/react": "19.1.17",
     "@types/react-dom": "19.1.11",
     "tailwindcss": "4.1.18",
     "typescript": "5.9.3"
+  },
+  "optionalDependencies": {
+    "@node-rs/argon2-linux-x64-gnu": "2.0.2"
   }
 }
