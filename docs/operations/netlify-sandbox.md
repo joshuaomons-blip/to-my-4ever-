@@ -17,7 +17,12 @@ The public sandbox runs entirely on Netlify's free tier:
 - No dedicated worker: job latency is "next request or within a minute".
 - `PG_STATEMENT_TIMEOUT_MS=0`: statement timeout startup parameter omitted for the pooled connection.
 
-## Environment variables (set in Netlify, scope: Functions)
+## Environment variables
+
+Non-secret sandbox defaults live in `apps/web/netlify/runtime-env.mjs`; anything set in the Netlify
+UI (scope: Functions) overrides them. Secrets go in `apps/web/netlify/runtime-secrets.mjs`, which is
+an empty placeholder in git: the deploy step writes the real values into its export only. Settings:
+
 
 `NODE_ENV=production`, `COOKIE_SECURE=true`, `REDIS_URL=memory`, `SANDBOX_AUTO_VERIFY_EMAIL=true`,
 `AUTO_MIGRATE=true`, `PG_STATEMENT_TIMEOUT_MS=0`, `PG_POOL_MAX=3`, `WEB_ORIGIN`, `ADMIN_ORIGIN`,

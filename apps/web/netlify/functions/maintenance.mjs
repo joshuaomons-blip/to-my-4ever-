@@ -1,5 +1,6 @@
 // Netlify Scheduled Function: periodic platform work (sandbox partner fills, order sync, settlement,
 // daily reconciliation at 06:00 UTC) — replaces the long-running worker on serverless hosting.
+import '../runtime-env.mjs';
 import { getConnectionString } from '@netlify/database';
 
 export default async () => {

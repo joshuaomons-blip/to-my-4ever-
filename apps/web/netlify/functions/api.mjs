@@ -1,5 +1,6 @@
 // Netlify Function: serves the platform API at /api/* by proxying to the in-process NestJS app
 // (apps/api/src/serverless.ts). Database: Netlify Database (Postgres), via @netlify/database.
+import '../runtime-env.mjs';
 import { getConnectionString } from '@netlify/database';
 
 let modPromise;
