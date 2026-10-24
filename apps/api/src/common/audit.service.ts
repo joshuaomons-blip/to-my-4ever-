@@ -17,17 +17,20 @@ const REDACT = /password|secret|token|code|tax_?id|ssn|card/i;
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-/** Copies metadata with secrets redacted. Null-prototype output + key filter prevent prototype pollution. */
+/**
+ * Copies metadata with secrets redacted. Built with Object.fromEntries (defines own data properties,
+ * never invokes the __proto__ setter) and unsafe keys are dropped, so metadata cannot pollute prototypes.
+ */
 export function redact(meta: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = Object.create(null);
+  const entries: Array<[string, unknown]> = [];
   for (const [k, v] of Object.entries(meta)) {
     if (UNSAFE_KEYS.has(k)) continue;
-    if (REDACT.test(k)) out[k] = '[REDACTED]';
-    else if (typeof v === 'bigint') out[k] = v.toString();
-    else if (v && typeof v === 'object' && !Array.isArray(v)) out[k] = redact(v as Record<string, unknown>);
-    else out[k] = v;
+    if (REDACT.test(k)) entries.push([k, '[REDACTED]']);
+    else if (typeof v === 'bigint') entries.push([k, v.toString()]);
+    else if (v && typeof v === 'object' && !Array.isArray(v)) entries.push([k, redact(v as Record<string, unknown>)]);
+    else entries.push([k, v]);
   }
-  return out;
+  return Object.fromEntries(entries);
 }
 
 /** Writes to the append-only, hash-chained audit_log. Pass a transaction client to make it atomic with the change. */
