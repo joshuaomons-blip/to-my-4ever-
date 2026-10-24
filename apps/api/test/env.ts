@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgres://aureon:aureon@localhost:5432/aureon_test';
+process.env.REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://localhost:6379/15';
+process.env.APP_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+process.env.SANDBOX_PAYMENT_WEBHOOK_SECRET = 'test-payment-webhook-secret-123';
+process.env.SANDBOX_BROKER_WEBHOOK_SECRET = 'test-broker-webhook-secret-1234';
+process.env.OPERATING_MODE = 'sandbox';
+process.env.EXPOSE_DEV_MAILBOX = 'false';
+process.env.RATE_LIMIT_MULTIPLIER = process.env.RATE_LIMIT_MULTIPLIER ?? '1000';
+process.env.WITHDRAWAL_REVIEW_THRESHOLD_MINOR = '100000';
