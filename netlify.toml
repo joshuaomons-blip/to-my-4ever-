@@ -2,7 +2,7 @@
 # SANDBOX hosting profile — see docs/operations/netlify-sandbox.md for what differs from production.
 [build]
   base = "apps/web"
-  command = "pnpm --filter @aureon/api build && pnpm build"
+  command = "pnpm --filter @aureon/api build && pnpm --filter @aureon/api bundle:serverless && pnpm build"
   publish = ".next"
 
 [build.environment]

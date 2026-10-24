@@ -4,7 +4,7 @@ import { getConnectionString } from '@netlify/database';
 
 export default async () => {
   if (!process.env.DATABASE_URL) process.env.DATABASE_URL = getConnectionString();
-  const mod = await import('../../../api/dist/serverless.js');
+  const mod = await import('../api-bundle/serverless.cjs');
   await (mod.default ?? mod).maintenance(20_000);
 };
 

@@ -5,7 +5,7 @@ import { getConnectionString } from '@netlify/database';
 let modPromise;
 function load() {
   if (!process.env.DATABASE_URL) process.env.DATABASE_URL = getConnectionString();
-  modPromise ??= import('../../../api/dist/serverless.js').then((m) => m.default ?? m);
+  modPromise ??= import('../api-bundle/serverless.cjs').then((m) => m.default ?? m);
   return modPromise;
 }
 

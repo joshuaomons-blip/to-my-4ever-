@@ -16,3 +16,4 @@ next-env.d.ts
 .env.local.sh
 .env.compose
 .netlify
+apps/web/netlify/api-bundle/
