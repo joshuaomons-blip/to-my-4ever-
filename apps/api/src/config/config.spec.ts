@@ -23,6 +23,12 @@ describe('configuration safety gates', () => {
     expect(() => loadConfig({ ...base, NODE_ENV: 'production', EXPOSE_DEV_MAILBOX: 'true' })).toThrow(/EXPOSE_DEV_MAILBOX/);
     expect(() => loadConfig({ ...base, NODE_ENV: 'production', RATE_LIMIT_MULTIPLIER: '10' })).toThrow(/RATE_LIMIT_MULTIPLIER/);
   });
+  it('refuses sandbox hosting shortcuts in live mode', () => {
+    const live = { ...base, OPERATING_MODE: 'live', LIVE_OPERATIONS_ACKNOWLEDGEMENT: LIVE_ACK_PHRASE };
+    expect(() => loadConfig({ ...live, REDIS_URL: 'memory' })).toThrow();
+    expect(() => loadConfig({ ...live, SANDBOX_AUTO_VERIFY_EMAIL: 'true' })).toThrow();
+    expect(loadConfig({ ...base, REDIS_URL: 'memory', SANDBOX_AUTO_VERIFY_EMAIL: 'true' }).sandboxAutoVerifyEmail).toBe(true);
+  });
   it('requires credentials for the Alpaca adapter', () => {
     expect(() => loadConfig({ ...base, BROKER_PROVIDER: 'alpaca' })).toThrow(/ALPACA_BROKER_API_KEY/);
   });

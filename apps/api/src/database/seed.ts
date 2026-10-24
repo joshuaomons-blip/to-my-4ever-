@@ -34,7 +34,10 @@ export const INSTRUMENTS: Array<[string, string, string, 'equity' | 'etf', strin
 // US-domiciled ETFs generally lack a PRIIPs KID, so EEA retail access is restricted by default (counsel to confirm).
 const EEA = ['DE', 'FR', 'IE', 'NL', 'ES', 'IT'];
 
-export async function seed(databaseUrl: string, opts: { encryptionKey?: Buffer; adminEmail?: string; adminPassword?: string; log?: (m: string) => void } = {}) {
+export async function seed(
+  databaseUrl: string,
+  opts: { encryptionKey?: Buffer; adminEmail?: string; adminPassword?: string; adminMfaAtFirstLogin?: boolean; log?: (m: string) => void } = {},
+) {
   const log = opts.log ?? console.log;
   const c = new Client({ connectionString: databaseUrl });
   await c.connect();
@@ -47,7 +50,17 @@ export async function seed(databaseUrl: string, opts: { encryptionKey?: Buffer; 
       );
     }
     log(`instruments: ${INSTRUMENTS.length}`);
-    if (opts.adminEmail && opts.adminPassword && opts.encryptionKey) {
+    if (opts.adminEmail && opts.adminPassword && opts.adminMfaAtFirstLogin) {
+      // Hosted sandbox: the administrator enrols their authenticator on first sign-in (no secret in logs).
+      const existing = await c.query('SELECT id FROM staff_users WHERE email = $1', [opts.adminEmail]);
+      if (!existing.rows[0]) {
+        const r = await c.query<{ id: string }>('INSERT INTO staff_users (email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id', [
+          opts.adminEmail, await hashPassword(opts.adminPassword), 'Administrator',
+        ]);
+        await c.query("INSERT INTO staff_roles (staff_id, role) VALUES ($1,'super_admin')", [r.rows[0]!.id]);
+        log(`bootstrap staff created: ${opts.adminEmail} (MFA enrolment at first login)`);
+      }
+    } else if (opts.adminEmail && opts.adminPassword && opts.encryptionKey) {
       const existing = await c.query('SELECT id FROM staff_users WHERE email = $1', [opts.adminEmail]);
       if (!existing.rows[0]) {
         const secret = generateTotpSecret();

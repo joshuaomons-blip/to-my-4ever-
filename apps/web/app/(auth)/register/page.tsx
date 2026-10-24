@@ -13,6 +13,11 @@ export default function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [country, setCountry] = useState('');
+  const [skipVerify, setSkipVerify] = useState(false);
+
+  useEffect(() => {
+    api<{ emailVerificationSkipped?: boolean }>('/v1/public/platform').then((p) => setSkipVerify(!!p.emailVerificationSkipped)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     api<J[]>('/v1/public/jurisdictions').then((j) => setCountries(j.filter((c) => c.status !== 'blocked' || c.code === country))).catch(() => undefined);
@@ -34,6 +39,16 @@ export default function RegisterPage() {
       setBusy(false);
     }
   };
+
+  if (done && skipVerify) {
+    return (
+      <>
+        <AuthHeading title="Account created" subtitle={<>If <strong className="text-text">{done}</strong> was available, your account is ready.</>} />
+        <Alert tone="info">This sandbox has no email provider, so email verification is skipped. Sign in with the password you just chose.</Alert>
+        <Link href="/login" className="mt-6 block"><Button size="lg" block>Continue to sign in</Button></Link>
+      </>
+    );
+  }
 
   if (done) {
     return (

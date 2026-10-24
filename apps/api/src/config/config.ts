@@ -28,6 +28,8 @@ export interface AppConfig {
   stepUpWindowSeconds: number;
   exposeDevMailbox: boolean;
   rateLimitMultiplier: number;
+  sandboxAutoVerifyEmail: boolean;
+  pgStatementTimeoutMs: number;
   logLevel: string;
 }
 
@@ -96,6 +98,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     stepUpWindowSeconds: int(env, 'STEP_UP_WINDOW_SECONDS', 300),
     exposeDevMailbox: env.EXPOSE_DEV_MAILBOX === 'true',
     rateLimitMultiplier: int(env, 'RATE_LIMIT_MULTIPLIER', 1),
+    sandboxAutoVerifyEmail: env.SANDBOX_AUTO_VERIFY_EMAIL === 'true',
+    pgStatementTimeoutMs: int(env, 'PG_STATEMENT_TIMEOUT_MS', 15_000),
     logLevel: env.LOG_LEVEL ?? 'info',
   };
   assertSafeConfig(cfg);
@@ -109,6 +113,10 @@ export function assertSafeConfig(cfg: AppConfig): void {
   }
   if (cfg.rateLimitMultiplier !== 1 && (cfg.nodeEnv === 'production' || cfg.operatingMode === 'live')) {
     throw new Error('RATE_LIMIT_MULTIPLIER may only be changed outside production');
+  }
+  // Sandbox-hosting conveniences (no email provider, no Redis) are never allowed for real-money operation.
+  if (cfg.operatingMode === 'live' && (cfg.sandboxAutoVerifyEmail || cfg.redisUrl === 'memory')) {
+    throw new Error('SANDBOX_AUTO_VERIFY_EMAIL and REDIS_URL=memory are only permitted in sandbox mode');
   }
   if (cfg.exposeDevMailbox && (cfg.nodeEnv === 'production' || cfg.operatingMode === 'live')) {
     throw new Error('EXPOSE_DEV_MAILBOX is only permitted in non-production sandbox environments');

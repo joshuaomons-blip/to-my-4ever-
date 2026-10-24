@@ -1,0 +1,15 @@
+# Netlify: customer web app (Next.js) + API as Netlify Functions + Netlify Database (Postgres).
+# SANDBOX hosting profile — see docs/operations/netlify-sandbox.md for what differs from production.
+[build]
+  base = "apps/web"
+  command = "pnpm --filter @aureon/api build && pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[functions]
+  directory = "netlify/functions"
+  # Trace files instead of bundling: NestJS relies on decorator metadata and optional requires.
+  node_bundler = "nft"

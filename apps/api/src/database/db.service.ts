@@ -16,9 +16,10 @@ export class DbService implements OnModuleDestroy {
   constructor(@Inject(APP_CONFIG) cfg: AppConfig) {
     this.pool = new Pool({
       connectionString: cfg.databaseUrl,
-      max: 20,
+      max: Number(process.env.PG_POOL_MAX ?? 20),
       idleTimeoutMillis: 30_000,
-      statement_timeout: 15_000,
+      // 0 disables the startup parameter (some transaction poolers reject it).
+      ...(cfg.pgStatementTimeoutMs > 0 ? { statement_timeout: cfg.pgStatementTimeoutMs } : {}),
       application_name: 'aureon-api',
     });
   }

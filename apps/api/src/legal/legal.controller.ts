@@ -17,6 +17,7 @@ export class LegalController {
     return {
       brand: 'Aureon Capital',
       operatingMode: this.cfg.operatingMode,
+      emailVerificationSkipped: this.cfg.sandboxAutoVerifyEmail,
       notice:
         this.cfg.operatingMode === 'sandbox'
           ? 'Sandbox environment. Aureon Capital is not currently authorised to provide investment services. No real money or securities are involved.'

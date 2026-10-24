@@ -92,6 +92,12 @@ export class AuthService {
       await this.audit.record({ actorType: 'customer', actorId: u.id, action: 'auth.register', targetType: 'user', targetId: u.id, req }, c);
       return u;
     });
+    if (this.cfg.sandboxAutoVerifyEmail) {
+      // Sandbox hosting without an email provider: mark verified instead of sending a link (refused in live mode).
+      await this.db.query('UPDATE users SET email_verified_at = now() WHERE id = $1', [user.id]);
+      await this.audit.record({ actorType: 'system', action: 'auth.email_auto_verified_sandbox', targetType: 'user', targetId: user.id, req });
+      return;
+    }
     await this.sendEmailToken(user.id, email, 'verify_email');
   }
 

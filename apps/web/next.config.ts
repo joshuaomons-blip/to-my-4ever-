@@ -25,6 +25,8 @@ const config: NextConfig = {
   output: 'standalone',
   // The browser only ever talks to this origin; the API is proxied so session cookies stay first-party.
   async rewrites() {
+    // On Netlify the API is a function mounted at /api/* (apps/web/netlify/functions/api.mjs).
+    if (process.env.NETLIFY === 'true') return [];
     return [{ source: '/api/:path*', destination: `${API}/:path*` }];
   },
   async headers() {

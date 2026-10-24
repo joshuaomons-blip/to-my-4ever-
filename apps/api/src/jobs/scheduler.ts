@@ -11,6 +11,21 @@ export class Scheduler {
 
   constructor(private readonly jobs: JobsService, private readonly db: DbService, @Inject(BROKER_ADAPTER) private readonly broker: BrokerAdapter) {}
 
+  /** One pass of periodic work, for hosts without a long-running worker (e.g. a cron-triggered function). */
+  async runDue(): Promise<void> {
+    const slot = (ms: number) => Math.floor(Date.now() / ms);
+    const q = this.db.pool;
+    if (this.broker.isSandbox) await this.jobs.enqueue(q, 'sandbox.partner.tick', {}, { dedupeKey: `tick:${slot(5_000)}`, maxAttempts: 1 });
+    const open = await this.db.query<{ id: string }>(
+      "SELECT id FROM orders WHERE status IN ('submitted','accepted','partially_filled','pending_cancel') AND updated_at < now() - interval '30 seconds' LIMIT 200",
+    );
+    for (const o of open) await this.jobs.enqueue(q, 'orders.sync', { orderId: o.id }, { dedupeKey: `order-sync:${o.id}` });
+    await this.jobs.enqueue(q, 'ledger.settle', {}, { dedupeKey: `settle:${slot(600_000)}` });
+    if (new Date().getUTCHours() === 6) {
+      await this.jobs.enqueue(q, 'reconciliation.run', {}, { dedupeKey: `recon:${new Date().toISOString().slice(0, 10)}`, maxAttempts: 3 });
+    }
+  }
+
   start(): void {
     const every = (ms: number, fn: () => Promise<void>) => this.timers.push(setInterval(() => fn().catch((e) => this.logger.error((e as Error).message)), ms));
     const slot = (ms: number) => Math.floor(Date.now() / ms);
