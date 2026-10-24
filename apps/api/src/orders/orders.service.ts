@@ -551,10 +551,11 @@ export class OrdersService {
   }
 
   /** Job: move matured sale proceeds from unsettled to available. */
-  async settleExecutions(): Promise<number> {
+  async settleExecutions(asOf?: string): Promise<number> {
     const due = await this.db.query<{ id: string; side: string; gross_minor: bigint; fee_minor: bigint; currency: string; user_id: string }>(
       `SELECT e.id, e.side, e.gross_minor, e.fee_minor, e.currency, o.user_id FROM executions e JOIN orders o ON o.id = e.order_id
-        WHERE e.settled_at IS NULL AND e.settlement_date <= current_date ORDER BY e.executed_at LIMIT 500`,
+        WHERE e.settled_at IS NULL AND e.settlement_date <= COALESCE($1::date, current_date) ORDER BY e.executed_at LIMIT 500`,
+      [asOf ?? null],
     );
     for (const e of due) {
       await this.db.tx(async (c) => {

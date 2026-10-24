@@ -82,14 +82,18 @@ export class LedgerService {
 
   private async accountId(q: Queryable, ref: AccountRef): Promise<string> {
     if (ref.owner) {
-      const r = await q.query<{ id: string }>(
-        `INSERT INTO ledger_accounts (owner_user_id, type, currency, normal_balance, allow_negative)
-         VALUES ($1,$2,$3,$4,false)
-         ON CONFLICT (owner_user_id, type, currency) WHERE owner_user_id IS NOT NULL DO UPDATE SET type = EXCLUDED.type
-         RETURNING id`,
+      // Lock-free lookup; create on first use. (An upsert with DO UPDATE would row-lock the account and
+      // allow deadlocks between concurrent journals that touch the same accounts in different orders.)
+      const find = () =>
+        q.query<{ id: string }>('SELECT id FROM ledger_accounts WHERE owner_user_id = $1 AND type = $2 AND currency = $3', [ref.owner, ref.type, ref.currency]);
+      const existing = (await find()).rows[0];
+      if (existing) return existing.id;
+      await q.query(
+        `INSERT INTO ledger_accounts (owner_user_id, type, currency, normal_balance, allow_negative) VALUES ($1,$2,$3,$4,false)
+         ON CONFLICT (owner_user_id, type, currency) WHERE owner_user_id IS NOT NULL DO NOTHING`,
         [ref.owner, ref.type, ref.currency, NORMAL[ref.type]],
       );
-      return r.rows[0]!.id;
+      return (await find()).rows[0]!.id;
     }
     const r = await q.query<{ id: string }>('SELECT id FROM ledger_accounts WHERE owner_user_id IS NULL AND type = $1 AND currency = $2', [ref.type, ref.currency]);
     if (!r.rows[0]) throw new Error(`Platform ledger account ${ref.type}/${ref.currency} missing`);
@@ -118,7 +122,8 @@ export class LedgerService {
     }
     const entryId = ins.rows[0].id;
     // Lock accounts in a stable order to avoid deadlocks between concurrent journals.
-    const resolved = await Promise.all(legs.map(async (l) => ({ id: await this.accountId(q, l.account), leg: l })));
+    const resolved: Array<{ id: string; leg: Leg }> = [];
+    for (const l of legs) resolved.push({ id: await this.accountId(q, l.account), leg: l });
     resolved.sort((a, b) => a.id.localeCompare(b.id));
     for (const r of resolved) {
       await q.query('INSERT INTO ledger_postings (journal_entry_id, ledger_account_id, amount_minor, currency) VALUES ($1,$2,$3,$4)', [

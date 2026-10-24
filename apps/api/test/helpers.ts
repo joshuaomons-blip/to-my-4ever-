@@ -138,7 +138,7 @@ export async function addMethod(c: Client): Promise<string> {
 export async function fund(c: Client, amount: string): Promise<{ methodId: string; depositId: string }> {
   const methodId = (await c.ctx.db.one<{ id: string }>('SELECT id FROM payment_methods WHERE user_id = $1 LIMIT 1', [c.userId]))?.id ?? (await addMethod(c));
   const d = await c.idem('/v1/funding/deposits', { amount, currency: 'USD', paymentMethodId: methodId }).expect(201);
-  await c.ctx.jobs.drain();
+  await drainAll(c.ctx);
   return { methodId, depositId: d.body.id };
 }
 
@@ -146,3 +146,14 @@ export async function balances(c: Client) {
   const r = await c.get('/v1/portfolio').expect(200);
   return r.body.cash as { available: string; pending: string; held: string; unsettled: string; withdrawalHold: string; total: string };
 }
+
+/** Make every delayed job due now, then drain (simulates the passage of time for retries/backoff). */
+export async function drainAll(ctx: TestCtx, rounds = 5) {
+  for (let i = 0; i < rounds; i++) {
+    await ctx.db.query("UPDATE jobs SET run_at = now() WHERE status = 'pending'");
+    const n = await ctx.jobs.drain();
+    if (n === 0) break;
+  }
+}
+
+export const MKT = (symbol: string, side: 'buy' | 'sell', quantity: string) => ({ symbol, side, type: 'market', timeInForce: 'day', quantity });

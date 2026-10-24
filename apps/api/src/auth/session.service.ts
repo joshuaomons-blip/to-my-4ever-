@@ -119,7 +119,8 @@ export class SessionService {
 export function sessionMiddleware(sessions: SessionService, cfg: AppConfig) {
   return async (req: AppRequest, _res: Response, next: NextFunction): Promise<void> => {
     try {
-      const isAdminPath = req.path.startsWith('/v1/admin');
+      // originalUrl: req.path is rewritten relative to the middleware mount point.
+      const isAdminPath = (req.originalUrl ?? req.url).startsWith('/v1/admin');
       const subject: SubjectType = isAdminPath ? 'staff' : 'customer';
       const token = (req.cookies as Record<string, string> | undefined)?.[cookieNames(cfg, subject).session];
       if (token) {
