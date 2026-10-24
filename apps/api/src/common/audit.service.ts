@@ -15,9 +15,13 @@ export interface AuditEntry {
 
 const REDACT = /password|secret|token|code|tax_?id|ssn|card/i;
 
-function redact(meta: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/** Copies metadata with secrets redacted. Null-prototype output + key filter prevent prototype pollution. */
+export function redact(meta: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = Object.create(null);
   for (const [k, v] of Object.entries(meta)) {
+    if (UNSAFE_KEYS.has(k)) continue;
     if (REDACT.test(k)) out[k] = '[REDACTED]';
     else if (typeof v === 'bigint') out[k] = v.toString();
     else if (v && typeof v === 'object' && !Array.isArray(v)) out[k] = redact(v as Record<string, unknown>);

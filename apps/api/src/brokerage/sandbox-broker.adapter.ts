@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { PoolClient } from 'pg';
 import { DbService } from '../database/db.service';
 import { Decimal } from '../common/money';
@@ -75,7 +75,7 @@ export class SandboxBrokerAdapter implements BrokerAdapter {
     if (existing) return this.getAccount(existing.id);
     const status = /reject/i.test(req.familyName) ? 'rejected' : /actionrequired/i.test(req.familyName) ? 'action_required' : 'active';
     const id = `sbx-acct-${randomUUID()}`;
-    const number = `SBX${Math.floor(1e8 + Math.random() * 9e8)}`;
+    const number = `SBX${randomInt(100_000_000, 1_000_000_000)}`;
     const { taxId: _omit, ...applicant } = req;
     await this.db.query(
       'INSERT INTO sandbox_partner.accounts (id, account_number, status, currency, applicant) VALUES ($1,$2,$3,$4,$5)',
