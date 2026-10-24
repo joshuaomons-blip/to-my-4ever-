@@ -57,7 +57,11 @@ export class DbService implements OnModuleDestroy {
     }
   }
 
+  private ended = false;
+
   async onModuleDestroy(): Promise<void> {
+    if (this.ended) return;
+    this.ended = true;
     await this.pool.end();
   }
 }

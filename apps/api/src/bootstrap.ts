@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConsoleLogger, INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
@@ -26,7 +26,9 @@ export function buildOpenApi(app: INestApplication) {
 }
 
 export async function createApp(opts: { logger?: boolean } = {}): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule, { rawBody: true, logger: opts.logger === false ? false : undefined });
+  // Production: one JSON object per line on stdout for the log shipper (CloudWatch / Datadog / Loki).
+  const logger = opts.logger === false ? false : process.env.NODE_ENV === 'production' ? new ConsoleLogger({ json: true }) : undefined;
+  const app = await NestFactory.create(AppModule, { rawBody: true, logger });
   const cfg = app.get<AppConfig>(APP_CONFIG);
   const express = app.getHttpAdapter().getInstance();
   express.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS ?? 1));

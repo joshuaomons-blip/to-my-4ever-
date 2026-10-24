@@ -3,3 +3,11 @@ packages:
   - packages/*
 onlyBuiltDependencies:
   - "@nestjs/core"
+# Security floors for transitive dependencies (keep until upstream ranges move past them).
+overrides:
+  multer: "^2.5.0"
+  path-to-regexp@8: "^8.4.2"
+  js-yaml@4: "^4.3.2"
+  postcss@8: "^8.5.31"
+  file-type@21: "^21.3.4"
+  lodash: "^4.18.1"

@@ -1,0 +1,54 @@
+# Local full stack in SANDBOX mode. Not a production topology (see docs/deployment.md).
+#   cp .env.compose.example .env.compose && docker compose --env-file .env.compose up --build
+name: aureon
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://aureon:aureon@postgres:5432/aureon
+  REDIS_URL: redis://redis:6379
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY}
+  SANDBOX_PAYMENT_WEBHOOK_SECRET: ${SANDBOX_PAYMENT_WEBHOOK_SECRET:?set SANDBOX_PAYMENT_WEBHOOK_SECRET}
+  SANDBOX_BROKER_WEBHOOK_SECRET: ${SANDBOX_BROKER_WEBHOOK_SECRET:-}
+  OPERATING_MODE: sandbox
+  COOKIE_SECURE: "false" # local http only; production requires true (enforced)
+  WEB_ORIGIN: http://localhost:3000
+  ADMIN_ORIGIN: http://localhost:3001
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment: { POSTGRES_USER: aureon, POSTGRES_PASSWORD: aureon, POSTGRES_DB: aureon }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U aureon"], interval: 5s, retries: 10 }
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+  migrate:
+    build: { context: ., dockerfile: infra/docker/api.Dockerfile }
+    command: ["dist/database/migrate.js"]
+    environment: *api-env
+    depends_on: { postgres: { condition: service_healthy } }
+  api:
+    build: { context: ., dockerfile: infra/docker/api.Dockerfile }
+    environment: *api-env
+    depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
+    ports: ["4000:4000"]
+  worker:
+    build: { context: ., dockerfile: infra/docker/api.Dockerfile }
+    command: ["dist/worker.js"]
+    environment: *api-env
+    depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
+  web:
+    build: { context: ., dockerfile: infra/docker/next.Dockerfile, args: { APP: web } }
+    command: ["apps/web/server.js"]
+    environment: { API_INTERNAL_URL: http://api:4000, PORT: "3000" }
+    depends_on: [api]
+    ports: ["3000:3000"]
+  admin:
+    build: { context: ., dockerfile: infra/docker/next.Dockerfile, args: { APP: admin } }
+    command: ["apps/admin/server.js"]
+    environment: { API_INTERNAL_URL: http://api:4000, PORT: "3001" }
+    depends_on: [api]
+    ports: ["3001:3001"]
+volumes: { pgdata: {}, redisdata: {} }
