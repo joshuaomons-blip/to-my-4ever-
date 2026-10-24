@@ -80,7 +80,8 @@ jobs:
         image: redis:7.4
         ports: ['6379:6379']
     env:
-      NODE_ENV: development
+      # NODE_ENV deliberately unset: `next build` fails under a non-production NODE_ENV,
+      # and the API defaults to its development (sandbox) configuration when unset.
       DATABASE_URL: postgres://aureon:aureon@localhost:5432/aureon_e2e
       REDIS_URL: redis://localhost:6379
       APP_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
