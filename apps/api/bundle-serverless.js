@@ -1,7 +1,7 @@
 /*
  * Bundles dist/serverless.js and its dependencies into one CommonJS file inside the web app's
  * Netlify functions folder, so the host's function bundler has nothing to resolve across the
- * pnpm workspace. Only the native argon2 binding stays external (declared by @aureon/web).
+ * pnpm workspace. Optional Nest integrations stay external.
  */
 const { build } = require('esbuild');
 const { join } = require('path');
@@ -25,6 +25,6 @@ build({
   target: 'node22',
   format: 'cjs',
   keepNames: true,
-  external: ['@node-rs/argon2', ...optional],
+  external: optional,
   logLevel: 'warning',
 }).then(() => console.log('bundled serverless API'));

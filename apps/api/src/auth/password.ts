@@ -1,8 +1,12 @@
-import { hash, verify } from '@node-rs/argon2';
+import { argon2Verify, argon2id } from 'hash-wasm';
+import { randomBytes } from 'crypto';
 import { AppError } from '../common/errors';
 
-// algorithm 2 = Argon2id (const enum in @node-rs/argon2); parameters follow OWASP minimums.
-const OPTS = { algorithm: 2, memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
+// Argon2id via WebAssembly (no native binding, so it bundles for serverless hosts).
+// Parameters follow OWASP minimums; output is a standard PHC string.
+const OPTS = { memorySize: 19_456, iterations: 2, parallelism: 1, hashLength: 32 } as const;
+const hash = (pw: string): Promise<string> =>
+  argon2id({ ...OPTS, password: pw, salt: randomBytes(16), outputType: 'encoded' });
 
 // A small deny-list; production should also check a breached-password service (k-anonymity API).
 const COMMON = new Set([
@@ -23,13 +27,13 @@ export function assertPasswordPolicy(password: string, email?: string): void {
   }
 }
 
-export const hashPassword = (pw: string): Promise<string> => hash(pw, OPTS);
+export const hashPassword = hash;
 export const verifyPassword = async (hashStr: string, pw: string): Promise<boolean> => {
   try {
-    return await verify(hashStr, pw);
+    return await argon2Verify({ hash: hashStr, password: pw });
   } catch {
     return false;
   }
 };
 // Used to equalise timing when the account does not exist.
-export const DUMMY_HASH_PROMISE = hash('timing-equaliser-not-a-password', OPTS);
+export const DUMMY_HASH_PROMISE = hash('timing-equaliser-not-a-password');

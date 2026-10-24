@@ -14,5 +14,3 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "nft"
-  # Native password-hashing binding: shipped as files, not bundled.
-  external_node_modules = ["@node-rs/argon2", "@node-rs/argon2-linux-x64-gnu"]

@@ -14,7 +14,6 @@
     "@aureon/ui": "workspace:*",
     "@fontsource-variable/fraunces": "5.3.0",
     "@netlify/database": "2.0.1",
-    "@node-rs/argon2": "2.0.2",
     "geist": "1.8.2",
     "next": "15.5.28",
     "react": "19.1.1",
@@ -28,8 +27,5 @@
     "@types/react-dom": "19.1.11",
     "tailwindcss": "4.1.18",
     "typescript": "5.9.3"
-  },
-  "optionalDependencies": {
-    "@node-rs/argon2-linux-x64-gnu": "2.0.2"
   }
 }
