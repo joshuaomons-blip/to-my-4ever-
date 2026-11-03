@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { Inbox } from 'lucide-react'
 import { prisma } from '@/server/db'
 import { mailboxEnabled } from '@/server/mailer'
+import { getCurrentUser } from '@/server/auth/session'
+import Link from 'next/link'
 import { SandboxStrip } from '@/components/brand'
 import { Card, EmptyState } from '@/components/ui'
 import { dateTimeFmt } from '@/lib/format'
@@ -12,21 +14,22 @@ export const metadata: Metadata = { title: 'Test mailbox', robots: { index: fals
 const LINK = /(https?:\/\/[^\s]+)/g
 
 /** Development-only inbox showing emails the sandbox would have sent. Disabled when SANDBOX_MAILBOX=false. */
-export default async function MailboxPage({ searchParams }: { searchParams: Promise<{ to?: string }> }) {
+export default async function MailboxPage() {
   if (!mailboxEnabled()) notFound()
-  const { to } = await searchParams
-  const emails = await prisma.outboxEmail.findMany({ where: to ? { to: to.toLowerCase() } : {}, orderBy: { createdAt: 'desc' }, take: 50 })
+  // Only ever show a signed-in customer their own emails: these contain account links.
+  const user = await getCurrentUser('customer')
+  const emails = user ? await prisma.outboxEmail.findMany({ where: { to: user.email }, orderBy: { createdAt: 'desc' }, take: 50 }) : []
   return (
     <>
       <SandboxStrip />
       <div className="mx-auto max-w-3xl px-5 py-12">
-        <p className="eyebrow">Development tool</p>
-        <h1 className="display mt-2 text-3xl font-semibold">Test mailbox</h1>
-        <p className="mt-2 text-sm text-muted">Verification and password-reset emails are captured here instead of being sent. Disable with <code className="num">SANDBOX_MAILBOX=false</code> once SMTP is configured.</p>
-        <form className="mt-6 flex gap-2">
-          <input name="to" defaultValue={to} placeholder="Filter by recipient email" className="w-full rounded-md border border-fg/10 bg-canvas px-3.5 py-2.5 text-sm" />
-          <button className="rounded-md bg-fg px-4 text-sm font-medium text-white">Filter</button>
-        </form>
+                <h1 className="display mt-2 text-3xl font-semibold">Test mailbox</h1>
+        <p className="mt-2 text-sm text-muted">Email isn’t sent in test mode. Messages to your address, such as your email confirmation link, appear here instead.</p>
+        {!user && (
+          <Card className="mt-6 p-5 text-sm text-fg-2">
+            <Link href="/login" className="underline">Sign in</Link> to see the emails sent to your address, such as your email confirmation link.
+          </Card>
+        )}
         <div className="mt-6 space-y-3">
           {emails.length === 0 && <Card><EmptyState icon={<Inbox className="size-5" />} title="No emails yet" /></Card>}
           {emails.map((m) => (

@@ -13,3 +13,6 @@ test-results
 
 # Local screenshot / preview output
 site-preview/
+
+# Netlify CLI state
+.netlify

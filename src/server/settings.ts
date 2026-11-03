@@ -67,7 +67,7 @@ export type SettingsKey = keyof typeof settingsSchemas
 export type Settings = { [K in SettingsKey]: z.infer<(typeof settingsSchemas)[K]> }
 
 export const DEFAULT_SETTINGS: Settings = {
-  branding: { platformName: 'Tesla Investment', tagline: 'Research Tesla stock, fund your account and follow your portfolio', logoDataUrl: '' },
+  branding: { platformName: process.env.PLATFORM_NAME || 'Tesla Investment', tagline: 'Research Tesla stock, fund your account and follow your portfolio', logoDataUrl: '' },
   appearance: { accent: 'signal', heroStyle: 'minimal' },
   homepage: {
     heroEyebrow: 'Tesla stock, explained and tracked',

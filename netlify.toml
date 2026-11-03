@@ -1,0 +1,9 @@
+# Netlify build settings. Secrets and PLATFORM_NAME are set as Netlify environment
+# variables, never here. Database schema is applied from netlify/database/migrations
+# (copies of the Prisma migrations) automatically before each production publish.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
