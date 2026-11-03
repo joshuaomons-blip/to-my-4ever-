@@ -1,0 +1,288 @@
+// Tesla Investment — SANDBOX brokerage schema.
+// All balances, holdings and transactions in this database are SIMULATED.
+// No real bank credentials, card numbers or government ID numbers are ever stored.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  SUPPORT
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TxType {
+  DEPOSIT
+  WITHDRAWAL
+  BUY
+  SELL
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum TokenPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model User {
+  id              String        @id @default(cuid())
+  email           String        @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  role            Role          @default(CUSTOMER)
+  status          AccountStatus @default(ACTIVE)
+  permissions     String[]      @default([])
+  emailVerifiedAt DateTime?
+  totpSecret      String?
+  totpEnabled     Boolean       @default(false)
+  flagged         Boolean       @default(false)
+  flagReason      String?
+  suspendedReason String?
+  isSeed          Boolean       @default(false)
+  lastLoginAt     DateTime?
+  failedLogins    Int           @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  account       Account?
+  kyc           KycSubmission?
+  sessions      Session[]
+  tokens        VerificationToken[]
+  transactions  Transaction[]
+  notifications Notification[]
+  auditActor    AuditLog[]          @relation("auditActor")
+  notesAuthored AdminNote[]         @relation("noteAuthor")
+  notesAbout    AdminNote[]         @relation("noteSubject")
+  reviewedTx    Transaction[]       @relation("txReviewer")
+  reviewedKyc   KycSubmission[]     @relation("kycReviewer")
+
+  @@index([role, status])
+  @@index([createdAt])
+}
+
+/// Simulated brokerage account. cashBalance = settled, spendable virtual cash.
+model Account {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountNumber String    @unique
+  cashBalance   Decimal   @default(0) @db.Decimal(18, 2)
+  holdings      Holding[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Holding {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol    String
+  shares    Decimal  @default(0) @db.Decimal(20, 6)
+  /// Total cost basis of the shares currently held (average-cost method).
+  costBasis Decimal  @default(0) @db.Decimal(18, 2)
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, symbol])
+}
+
+/// Sandbox KYC. Deliberately stores NO government ID numbers or document images.
+model KycSubmission {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         KycStatus @default(NOT_STARTED)
+  legalName      String?
+  dateOfBirth    DateTime?
+  country        String?
+  addressLine1   String?
+  city           String?
+  postalCode     String?
+  documentType   String?
+  occupation     String?
+  sourceOfFunds  String?
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  reviewerId     String?
+  reviewer       User?     @relation("kycReviewer", fields: [reviewerId], references: [id])
+  decisionReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model Transaction {
+  id           String    @id @default(cuid())
+  reference    String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         TxType
+  status       TxStatus  @default(PENDING)
+  symbol       String?
+  /// Gross cash amount (USD). For BUY: notional spent excl. fee. For SELL: proceeds excl. fee.
+  amount       Decimal   @db.Decimal(18, 2)
+  fee          Decimal   @default(0) @db.Decimal(18, 2)
+  shares       Decimal?  @db.Decimal(20, 6)
+  price        Decimal?  @db.Decimal(14, 4)
+  /// Sandbox payment method label only (e.g. "Sandbox ACH"). Never real credentials.
+  method       String?
+  brokerRef    String?
+  brokerMode   String    @default("sandbox")
+  /// True for demo seed data.
+  isSeed       Boolean   @default(false)
+  customerNote String?
+  adminNote    String?
+  reviewerId   String?
+  reviewer     User?     @relation("txReviewer", fields: [reviewerId], references: [id])
+  reviewedAt   DateTime?
+  settlesAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "customer" or "admin" — admin sessions are issued only by the admin login.
+  scope      String
+  ip         String?
+  userAgent  String?
+  /// For admin sessions awaiting a TOTP code.
+  mfaPending Boolean  @default(false)
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String       @id @default(cuid())
+  tokenHash String       @unique
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   TokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+}
+
+/// Sandbox outbox: emails are recorded here instead of being sent.
+model OutboxEmail {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  level     String    @default("info")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("auditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  authorId  String?
+  author    User?    @relation("noteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  subjectId String
+  subject   User     @relation("noteSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  /// "customer" | "kyc" | "withdrawal" | "transaction"
+  context   String
+  contextId String?
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([subjectId])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  level     String   @default("info")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+}
