@@ -10,3 +10,6 @@ dist
 next-env.d.ts
 .DS_Store
 test-results
+
+# Local screenshot / preview output
+site-preview/
