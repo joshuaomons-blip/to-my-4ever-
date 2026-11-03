@@ -18,7 +18,7 @@ export default async function AdminSecurityPage({ searchParams }: { searchParams
   ])
   return (
     <>
-      <PageHeader eyebrow="Account" title="My security" description="Protect your administrator account. Admin sessions expire after 8 hours, or 60 minutes of inactivity." />
+      <PageHeader title="My security" description="Protect your administrator account. Admin sessions expire after 8 hours, or 60 minutes of inactivity." />
       {sp.welcome && <Alert tone="gain" className="mb-6" title="Super administrator created">Next, enable two-factor authentication below, then review platform settings.</Alert>}
       {sp.setup === 'required' && !me.totpEnabled && <Alert tone="warn" className="mb-6" title="Two-factor authentication required">The platform security policy requires 2FA for administrators. Set it up to continue.</Alert>}
       <div className="grid gap-6 xl:grid-cols-2">

@@ -8,10 +8,10 @@ import { RegisterForm } from '@/components/auth/forms'
 export const metadata: Metadata = { title: 'Create account' }
 
 export default async function RegisterPage() {
-  if (await getCurrentUser('customer')) redirect('/app')
+  if (await getCurrentUser('customer')) redirect('/account')
   return (
     <>
-      <AuthTitle title="Open a sandbox account" subtitle={<>Already registered? <Link href="/login" className="text-white underline-offset-4 hover:underline">Sign in</Link></>} />
+      <AuthTitle title="Open an account" subtitle={<>Already registered? <Link href="/login" className="text-fg underline-offset-4 hover:underline">Sign in</Link></>} />
       <RegisterForm />
     </>
   )

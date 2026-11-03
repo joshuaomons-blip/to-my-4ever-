@@ -1,11 +1,11 @@
 import { route } from '@/server/http'
 import { prisma } from '@/server/db'
 import { txWhere } from '@/server/services/admin'
-import { settleDueDeposits } from '@/server/services/ledger'
+import { sweepDeposits } from '@/server/payments/service'
 import { toTxDTO } from '@/server/services/portfolio'
 
 export const GET = route({ auth: 'customer' }, async ({ req, user }) => {
-  await settleDueDeposits(user.id)
+  await sweepDeposits(user.id)
   const sp = req.nextUrl.searchParams
   const page = Math.max(1, Number(sp.get('page')) || 1)
   const where = { ...txWhere({ type: sp.get('type') ?? undefined, status: sp.get('status') ?? undefined, q: sp.get('q') ?? undefined }), userId: user.id }

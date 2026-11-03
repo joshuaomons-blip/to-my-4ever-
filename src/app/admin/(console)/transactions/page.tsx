@@ -18,7 +18,7 @@ export default async function AdminTransactions({ searchParams }: { searchParams
   return (
     <>
       <PageHeader
-        eyebrow="Operations"
+       
         title="All transactions"
         description="Deposits, withdrawals, buy and sell orders across every customer."
         actions={
@@ -39,15 +39,15 @@ export default async function AdminTransactions({ searchParams }: { searchParams
           values={sp}
           extra={
             <>
-              <input type="date" name="from" defaultValue={sp.from} aria-label="From date" className="h-10 rounded-xl border border-white/10 bg-ink/70 px-3 text-sm text-silver" />
-              <input type="date" name="to" defaultValue={sp.to} aria-label="To date" className="h-10 rounded-xl border border-white/10 bg-ink/70 px-3 text-sm text-silver" />
+              <input type="date" name="from" defaultValue={sp.from} aria-label="From date" className="h-10 rounded-md border border-fg/10 bg-canvas/70 px-3 text-sm text-fg-2" />
+              <input type="date" name="to" defaultValue={sp.to} aria-label="To date" className="h-10 rounded-md border border-fg/10 bg-canvas/70 px-3 text-sm text-fg-2" />
             </>
           }
         />
-        <div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-white/[0.06] px-5 py-3 text-xs text-mute">
-          <span><span className="num text-white">{data.total}</span> transactions</span>
-          <span>Gross amount <span className="num text-white">{usdFmt(data.sumAmount)}</span></span>
-          <span>Simulated fees <span className="num text-white">{usdFmt(data.sumFees)}</span></span>
+        <div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-fg/[0.06] px-5 py-3 text-xs text-muted">
+          <span><span className="num text-fg">{data.total}</span> transactions</span>
+          <span>Gross amount <span className="num text-fg">{usdFmt(data.sumAmount)}</span></span>
+          <span>Simulated fees <span className="num text-fg">{usdFmt(data.sumFees)}</span></span>
         </div>
         {data.rows.length === 0 ? <EmptyState icon={<Receipt className="size-5" />} title="No transactions match" /> : <TxTable rows={data.rows} hrefBase="/admin/transactions" showCustomer customerHref="/admin/customers" />}
         <Pagination page={data.page} pages={data.pages} hrefFor={(p) => `/admin/transactions${qs(sp, { page: p })}`} />

@@ -18,7 +18,7 @@ export function LogoutButton({ scope, className, compact }: { scope: 'customer' 
         router.refresh()
       }}
       disabled={busy}
-      className={cn('flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-mute transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-50', className)}
+      className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-fg/[0.04] hover:text-fg disabled:opacity-50', className)}
     >
       <LogOut className="size-[18px]" />
       {!compact && 'Sign out'}

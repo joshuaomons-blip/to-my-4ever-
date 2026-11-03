@@ -22,7 +22,7 @@ export default async function SupportPage() {
             <Card key={label as string} className="p-6">
               <I className="size-5 text-accent" />
               <p className="eyebrow mt-5">{label as string}</p>
-              {href ? <a href={href as string} className="mt-1.5 block text-sm text-white hover:underline">{value as string}</a> : <p className="mt-1.5 text-sm text-white">{value as string}</p>}
+              {href ? <a href={href as string} className="mt-1.5 block text-sm text-fg hover:underline">{value as string}</a> : <p className="mt-1.5 text-sm text-fg">{value as string}</p>}
             </Card>
           )
         })}

@@ -7,10 +7,10 @@ export default function NotFound() {
       <div>
         <p className="num text-sm text-accent">404</p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight">Page not found</h1>
-        <p className="mt-3 text-mute">The page you’re looking for doesn’t exist or has moved.</p>
+        <p className="mt-3 text-muted">The page you’re looking for doesn’t exist or has moved.</p>
         <div className="mt-8 flex justify-center gap-2">
           <Link href="/" className={buttonClass('light')}>Go home</Link>
-          <Link href="/app" className={buttonClass('ghost')}>Dashboard</Link>
+          <Link href="/account" className={buttonClass('ghost')}>Dashboard</Link>
         </div>
       </div>
     </div>

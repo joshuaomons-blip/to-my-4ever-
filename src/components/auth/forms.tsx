@@ -10,7 +10,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/format'
 
 type Scope = 'customer' | 'admin'
-const home = (s: Scope) => (s === 'admin' ? '/admin' : '/app')
+const home = (s: Scope) => (s === 'admin' ? '/admin' : '/account')
 const loginPath = (s: Scope) => (s === 'admin' ? '/admin/login' : '/login')
 
 function PasswordInput(props: React.ComponentProps<typeof Input>) {
@@ -18,7 +18,7 @@ function PasswordInput(props: React.ComponentProps<typeof Input>) {
   return (
     <div className="relative">
       <Input {...props} type={show ? 'text' : 'password'} className="pr-10" />
-      <button type="button" onClick={() => setShow((s) => !s)} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-dim hover:text-white" aria-label={show ? 'Hide password' : 'Show password'}>
+      <button type="button" onClick={() => setShow((s) => !s)} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-faint hover:text-fg" aria-label={show ? 'Hide password' : 'Show password'}>
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
     </div>
@@ -32,10 +32,10 @@ export function PasswordMeter({ value }: { value: string }) {
     <div className="mt-2">
       <div className="flex gap-1">
         {[0, 1, 2, 3].map((i) => (
-          <span key={i} className={cn('h-1 flex-1 rounded-full transition-colors', i < score ? (score <= 2 ? 'bg-warn' : 'bg-gain') : 'bg-white/10')} />
+          <span key={i} className={cn('h-1 flex-1 rounded-full transition-colors', i < score ? (score <= 2 ? 'bg-warn' : 'bg-gain') : 'bg-fg/10')} />
         ))}
       </div>
-      <p className="mt-1.5 text-[11px] text-dim">12+ characters with upper and lower case letters and a number.</p>
+      <p className="mt-1.5 text-[11px] text-faint">12+ characters with upper and lower case letters and a number.</p>
     </div>
   )
 }
@@ -64,7 +64,7 @@ export function LoginForm({ scope, next }: { scope: Scope; next?: string }) {
         <PasswordInput id="password" autoComplete="current-password" value={f.values.password} onChange={(e) => f.set('password', e.target.value)} invalid={!!f.errors.password} required />
       </Field>
       <div className="flex justify-end">
-        <Link href={scope === 'admin' ? '/admin/forgot-password' : '/forgot-password'} className="text-xs text-mute hover:text-white">Forgot password?</Link>
+        <Link href={scope === 'admin' ? '/admin/forgot-password' : '/forgot-password'} className="text-xs text-muted hover:text-fg">Forgot password?</Link>
       </div>
       <Button type="submit" size="lg" className="w-full" loading={f.loading} variant={scope === 'admin' ? 'light' : 'primary'}>Sign in</Button>
     </form>
@@ -90,8 +90,8 @@ export function MfaForm({ scope, next }: { scope: Scope; next?: string }) {
         <Input ref={ref} id="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" className="num text-center text-2xl tracking-[0.5em]" value={f.values.code} onChange={(e) => f.set('code', e.target.value.replace(/\D/g, ''))} invalid={!!f.errors.code} />
       </Field>
       <Button type="submit" size="lg" className="w-full" loading={f.loading} disabled={f.values.code.length !== 6}>Verify</Button>
-      <p className="text-center text-xs text-dim">
-        Lost your device? <Link href={loginPath(scope)} className="text-mute hover:text-white">Start over</Link> or contact {scope === 'admin' ? 'a super administrator' : 'support'}.
+      <p className="text-center text-xs text-faint">
+        Lost your device? <Link href={loginPath(scope)} className="text-muted hover:text-fg">Start over</Link> or contact {scope === 'admin' ? 'a super administrator' : 'support'}.
       </p>
     </form>
   )
@@ -113,7 +113,7 @@ export function RegisterForm() {
     if (!res) return
     setDone(true)
     setTimeout(() => {
-      router.push('/app')
+      router.push('/account')
       router.refresh()
     }, 900)
   }
@@ -136,15 +136,15 @@ export function RegisterForm() {
         <PasswordInput id="pw" autoComplete="new-password" value={f.values.password} onChange={(e) => f.set('password', e.target.value)} invalid={!!f.errors.password} />
         <PasswordMeter value={f.values.password} />
       </Field>
-      <label className="flex items-start gap-3 text-xs leading-relaxed text-mute">
+      <label className="flex items-start gap-3 text-xs leading-relaxed text-muted">
         <input type="checkbox" className="mt-0.5 size-4 accent-[var(--color-accent)]" checked={f.values.accept} onChange={(e) => f.set('accept', e.target.checked)} />
         <span>
-          I understand this is a <span className="text-white">sandbox with simulated funds</span>, not a real brokerage, and I accept the{' '}
-          <Link href="/legal/terms" className="underline hover:text-white">terms</Link> and <Link href="/legal/privacy" className="underline hover:text-white">privacy policy</Link>.
+          I understand that TSLA holdings and orders on this platform are <span className="text-fg">simulated</span>, and I accept the{' '}
+          <Link href="/legal/terms" className="underline hover:text-fg">terms</Link> and <Link href="/legal/privacy" className="underline hover:text-fg">privacy policy</Link>.
         </span>
       </label>
       {f.errors.accept && <p className="text-xs text-loss">{f.errors.accept}</p>}
-      <Button type="submit" size="lg" className="w-full" loading={f.loading}>Create sandbox account</Button>
+      <Button type="submit" size="lg" className="w-full" loading={f.loading}>Create account</Button>
     </form>
   )
 }
@@ -159,7 +159,7 @@ export function ForgotForm({ scope }: { scope: Scope }) {
   if (sent)
     return (
       <Alert tone="gain" icon={<MailCheck className="size-5" />} title="Check your inbox">
-        If an account exists for that email, we sent a reset link (valid 30 minutes). In this sandbox, emails appear in the <Link className="underline" href="/dev/mailbox">sandbox mailbox</Link>.
+        If an account exists for that email, we sent a reset link (valid 30 minutes). In test mode, emails appear in the <Link className="underline" href="/dev/mailbox">test mailbox</Link>.
       </Alert>
     )
   return (
@@ -169,7 +169,7 @@ export function ForgotForm({ scope }: { scope: Scope }) {
         <Input id="email" type="email" autoComplete="email" value={f.values.email} onChange={(e) => f.set('email', e.target.value)} invalid={!!f.errors.email} />
       </Field>
       <Button type="submit" size="lg" className="w-full" loading={f.loading} variant={scope === 'admin' ? 'light' : 'primary'}>Send reset link</Button>
-      <p className="text-center text-xs text-dim"><Link href={loginPath(scope)} className="hover:text-white">Back to sign in</Link></p>
+      <p className="text-center text-xs text-faint"><Link href={loginPath(scope)} className="hover:text-fg">Back to sign in</Link></p>
     </form>
   )
 }
@@ -211,18 +211,18 @@ export function VerifyEmail({ token }: { token: string }) {
       if (!r.ok) setMsg(r.error)
     })
   }, [token])
-  if (state === 'loading') return <p className="text-sm text-mute">Verifying your email…</p>
+  if (state === 'loading') return <p className="text-sm text-muted">Verifying your email…</p>
   if (state === 'ok')
     return (
       <div className="space-y-4">
-        <Alert tone="gain" icon={<CircleCheck className="size-5" />} title="Email verified">You can now fund your sandbox account and start identity verification.</Alert>
-        <Link href="/app" className="block text-center text-sm text-white underline">Go to dashboard</Link>
+        <Alert tone="gain" icon={<CircleCheck className="size-5" />} title="Email verified">You can now add funds and start identity verification.</Alert>
+        <Link href="/account" className="block text-center text-sm text-fg underline">Go to dashboard</Link>
       </div>
     )
   return (
     <div className="space-y-4">
       <Alert tone="loss" title="Verification failed">{msg}</Alert>
-      <Link href="/app" className="block text-center text-sm text-mute underline">Sign in to request a new link</Link>
+      <Link href="/account" className="block text-center text-sm text-muted underline">Sign in to request a new link</Link>
     </div>
   )
 }

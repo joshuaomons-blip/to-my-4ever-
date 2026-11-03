@@ -1,108 +1,98 @@
-# Tesla Investment — Sandbox Brokerage Platform
+# Tesla Investment — TSLA research, funding and simulated portfolio website
 
-A full-stack **sandbox** investment platform focused on TSLA, with a customer dashboard and a separate super-administrator console.
+A full-stack, responsive **website** (not a mobile app) with a public site, a customer account area and a separate administrator console.
 
-> **Sandbox only.** All balances, deposits, withdrawals, orders and holdings are simulated with virtual funds. No real money moves, no shares are bought, and no bank, card or government-ID data is collected. The platform is independent and **not affiliated with Tesla, Inc.** These disclosures are hard-coded and cannot be removed from the admin console.
+| Real today | Simulated today |
+| --- | --- |
+| Accounts, authentication, 2FA, identity-review workflow, support requests, audit log | TSLA prices (deterministic simulated feed) |
+| Payment pipeline: deposit references, signed webhooks, independent verification, duplicate and failure handling | TSLA orders and holdings: no shares are bought on any exchange |
+| Ledger with documented corrections and second-administrator approval for real money | All money, **while the test payment provider is active (the default)** |
+
+The site is independent and **not affiliated with Tesla, Inc.**; that disclosure is fixed and cannot be removed from the admin console.
 
 ## Stack
 
-| Layer | Tech |
-| --- | --- |
-| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Recharts, Lucide |
-| Backend | Next.js route handlers (`src/app/api`), service layer (`src/server`) |
-| Database | PostgreSQL + Prisma ORM |
-| Auth | Server-side sessions (HTTP-only cookies, SHA-256 hashed tokens), scrypt password hashing, TOTP 2FA, RBAC |
-| Documents | `pdf-lib` statements, CSV exports |
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Recharts · PostgreSQL · Prisma 6 · server-side sessions (scrypt, TOTP 2FA, RBAC) · pdf-lib statements.
 
-## Quick start
+## Run it locally
 
 ```bash
-cp .env.example .env            # set DATABASE_URL and a random ADMIN_SETUP_TOKEN (32+ chars)
+cp .env.example .env     # set DATABASE_URL, ADMIN_SETUP_TOKEN (32+ random chars), TEST_PAYMENTS_WEBHOOK_SECRET
 npm install
-npx prisma migrate deploy       # create tables
-npm run db:seed                 # optional: 12 clearly labeled demo customers + simulated history
-npm run dev                     # http://localhost:3000
+npx prisma migrate deploy
+npm run db:seed          # optional demo customers (emails end @demo.example); prints their password
+npm run dev              # http://localhost:3000
 ```
 
-Create the first **super administrator**. There is no hard-coded admin password; use one of these:
+Emails (verification, password reset) are captured at **`/dev/mailbox`** until SMTP is wired into `src/server/mailer.ts`; set `SANDBOX_MAILBOX=false` in production.
 
-1. Open **`/admin/setup`** and enter the `ADMIN_SETUP_TOKEN` from the server environment. The page permanently disables itself once a super admin exists.
-2. Or use the CLI: `ADMIN_EMAIL=you@co.com ADMIN_PASSWORD='Long-Unique-Passphrase-1' npm run admin:create`
+## Administrator access
 
-Then sign in at **`/admin/login`** and enable 2FA under **My security**.
+There is no default admin password. Create the first **super administrator** once, either:
 
-The seed prints the demo customer password. Set `SEED_CUSTOMER_PASSWORD` to choose your own. Verification and password-reset emails are captured in the **sandbox mailbox** at `/dev/mailbox`. Disable it with `SANDBOX_MAILBOX=false` once SMTP is wired into `src/server/mailer.ts`.
+1. at **`/admin/setup`**, entering the `ADMIN_SETUP_TOKEN` from the server environment (the page disables itself afterwards), or
+2. from the CLI: `ADMIN_EMAIL=you@company.com ADMIN_PASSWORD='Long-Unique-Passphrase-1' npm run admin:create`.
 
-## Customer experience (`/app`)
+Then sign in at **`/admin/login`** (separate from customer login; customer accounts are refused there) and enable two-factor authentication under *My security*. Further admins are created under *Administrators* with roles (`SUPPORT`, `ADMIN`, `SUPER_ADMIN`) and per-permission toggles.
 
-1. **Registration & login.** Sign-up, email verification, password recovery, profile, optional TOTP 2FA, session management.
-2. **Identity verification.** Sandbox KYC form with *not started / pending / approved / rejected* states. It collects no ID numbers or images.
-3. **Dashboard.** Total value, cash, invested amount, P/L, a live sandbox TSLA quote, and a portfolio performance chart (1D–ALL).
-4. **Funding.** Virtual deposits (sandbox ACH, wire or card labels only), pending → completed settlement, payment history.
-5. **Buy shares.** Dollar or share orders, fractional to 6 dp, a fee preview, a confirmation step and a receipt.
-6. **Sell shares.** Sell any portion with confirmation; balances update immediately.
-7. **Withdrawals.** Requests reserve funds and wait for admin review. Customers can cancel while pending. Rejected requests are refunded.
-8. **Transaction history.** Filter by type, status, date and reference; per-transaction receipts.
-9. **Statements.** PDF portfolio summary and transaction report for any period, watermarked *SANDBOX*.
+## Website map
 
-Requirements are enforced server-side: deposits need a verified email; trading and withdrawals need approved KYC; maintenance mode pauses all money movement.
+**Public:** `/` home · `/about` · `/markets` (TSLA overview, statistics, risk) · `/learn` (investment information) · `/faq` · `/support` · `/legal/*` · `/register` · `/login`.
 
-## Super admin console (`/admin`)
+**Customer account (`/account`):** overview · portfolio · trade · add funds · withdraw · activity · statements (PDF) · identity verification · support requests · profile and security.
 
-- **Overview.** Customers, active/suspended/flagged counts, pending KYC and withdrawals, simulated deposits/withdrawals/investments/volume, a 30-day activity chart, the latest audit events and transactions.
-- **Customers.** Search and filter; profile, portfolio, holdings, KYC, transactions, notes and activity; suspend/reactivate (revokes sessions), flag suspicious activity, add notes, force sign-out.
-- **KYC.** Queue by status, approve/reject (a reason is required for rejection), internal review notes.
-- **Transactions.** Filters, totals, detail pages with audit trail, CSV export.
-- **Withdrawals.** Pending queue (oldest first), approve/reject with notes, decision history and audit trail.
-- **Website content.** Homepage hero, announcements, in-app notifications (to everyone or one customer), support info, FAQ, investment info, maintenance mode.
-- **Settings.** Platform name, logo upload, accent colour and hero style, simulated fees and min/max limits, *require 2FA for admins* policy.
-- **Administrators.** Create admins (one-time temporary password), roles (`SUPPORT`, `ADMIN`, `SUPER_ADMIN`), per-permission toggles, suspend, reset password.
-- **Audit log.** Searchable record of logins, failures, security changes and every admin decision.
+**Admin console (`/admin`):** overview · customers (search, open, suspend, flag, notes, sign-out, balance corrections) · identity reviews · support requests · deposits · withdrawals · transactions (CSV export) · balance corrections · payment provider · website content (homepage, announcements, notifications, FAQ, support info, investment info, maintenance mode) · settings (name, logo, appearance, fees, limits, admin 2FA policy) · administrators and permissions · audit log.
 
-### Permissions
+## Payments
 
-`customers:read`, `customers:manage`, `kyc:review`, `transactions:read`, `transactions:export`, `withdrawals:review`, `content:manage`, `settings:manage`, `admins:manage` (super admin only), `audit:read`. Every admin API route and page checks its permission on the server.
+All payments go through a provider integration layer in `src/server/payments/`:
+
+| Piece | What it does |
+| --- | --- |
+| `types.ts` | `PaymentProvider` interface: create checkout, verify webhook, retrieve session, refund |
+| `test-provider.ts` | Built-in test provider with its own payment records and signed webhooks (default) |
+| `stripe-provider.ts` | Stripe Checkout: cards and US bank account (ACH) debits, refunds, REST over `fetch` |
+| `service.ts` | Deposit lifecycle, webhook processing, verification, duplicate/failure handling, refunds |
+
+**Deposit flow.** The customer picks an amount and method → a `DepositRequest` with a unique reference is created (client idempotency key prevents double submission) → card: redirect to the provider's hosted checkout; bank: payment instructions quoting the reference → the provider sends a webhook to `/api/webhooks/payments/<provider>` → the platform **(1)** verifies the HMAC signature over the raw body, **(2)** stores the event with a unique `(provider, eventId)` (replays are ignored), **(3)** re-reads the payment **from the provider's API**, **(4)** checks live/test mode and currency, then **(5)** atomically marks the deposit `SUCCEEDED`, writes one ledger entry (unique link, so it can never be credited twice) and credits the amount actually received. Failed, expired and cancelled payments are recorded with reasons and the customer is notified.
+
+There is **no "mark as paid" button** anywhere. Admins can only *re-check with provider*. Screenshots, receipts or manual confirmations are never accepted.
+
+**Withdrawals.** Admin approval required. In test mode payouts are simulated; with live payments the money is returned to the customer's original payment method through provider refunds (refund-to-source).
+
+**Trading safety.** If live payments are enabled while the broker is the simulated one, trading is disabled: real money never buys simulated shares.
+
+### Test mode (default)
+
+`PAYMENT_PROVIDER="test"`. Card deposits open a test checkout page with Stripe-style test cards (succeed / declined / insufficient funds); bank-transfer deposits show test instructions plus a *simulate transfer received* button. Admins also get a payment simulator under *Payment provider* (including a different-amount transfer). Every simulated payment still goes through the signed-webhook → verification pipeline.
+
+### Activating real payments (Stripe)
+
+1. Create a Stripe account and complete its business verification. Investment-related businesses typically need Stripe's explicit approval.
+2. In the server environment (never in browser code): `PAYMENT_PROVIDER="stripe"`, `STRIPE_SECRET_KEY="sk_test_..."`, `APP_URL="https://your-domain"`.
+3. In Stripe → Developers → Webhooks, add `https://your-domain/api/webhooks/payments/stripe` with events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`; put its signing secret in `STRIPE_WEBHOOK_SECRET="whsec_..."`.
+4. Test end to end with `sk_test_` keys and Stripe's test cards / test bank accounts.
+5. Going live requires **all** of: `sk_live_` key, `PAYMENTS_LIVE_ENABLED="true"`, and a platform name that does not use a third party's trademark (live payments refuse to start while the name contains "Tesla"). The admin *Payment provider* page shows this checklist.
+
+**Legal prerequisites (not solvable in code).** Accepting customer money for investment generally requires a licensed broker-dealer (or a partnership such as Alpaca Broker API / DriveWealth, whose adapters are stubbed in `src/server/broker/licensed.ts`), money-transmission / e-money permissions or a provider that holds funds for you, a KYC/AML provider (the built-in identity review is a workflow, not document verification), and legal review of terms, privacy and marketing. Do not enable live payments before these are in place.
+
+## Balance corrections
+
+`/admin/adjustments` or the customer page. Every correction is an `ADJUSTMENT` ledger entry with a reason, never an in-place edit.
+
+- **Demo / test mode:** applied immediately by an admin with `ledger:adjust` (manage simulated balances).
+- **Live mode:** requires a supporting reference and approval by a **different** admin with `ledger:approve` (four-eyes).
 
 ## Security
 
-- Separate customer (`ti_session`) and admin (`ti_admin`) sessions. A token is valid only for its scope **and** a matching role, so customers can never reach admin routes.
-- Session tokens are 256-bit random values, stored only as SHA-256 hashes. Admin sessions last 8 h with a 60-minute idle timeout.
-- scrypt password hashing, 12+ character password policy, account lockout after 5 failures, timing-safe login.
-- TOTP 2FA (RFC 6238) for customers and admins, with an optional mandatory policy for admins.
-- PostgreSQL-backed rate limiting (login, registration, reset, MFA, trading, per-user API writes).
-- CSRF protection via Origin checks and JSON-only mutations, plus SameSite=Lax cookies.
-- Zod validation on every input; CSV formula-injection escaping; security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS in production).
-- Race-safe ledger: balance and holding changes use conditional atomic updates inside transactions.
-- No secrets in the frontend; broker credentials (future) are server-only environment variables.
-
-## Brokerage adapter
-
-Every deposit, withdrawal and order goes through `BrokerAdapter` (`src/server/broker/types.ts`):
-
-- `SandboxBroker` (the default, `BROKER_MODE=sandbox`) uses a deterministic simulated TSLA price feed (`src/lib/market-sim.ts`) and simulated fills and transfers.
-- `UnimplementedLicensedBroker` (`alpaca`, `drivewealth`) refuses every call. Going live requires a licensed broker-dealer agreement, its KYC/AML and funding APIs (replacing the sandbox flows), webhook handling, a secrets manager, and legal/compliance review. It also requires rebranding: real-money services cannot use another company’s name or trademarks.
+Separate customer/admin sessions bound to role; hashed session tokens; scrypt passwords; lockout after failed logins; TOTP 2FA with optional mandatory policy for admins; PostgreSQL-backed rate limiting; Origin checks + JSON-only mutations; zod validation on every input; CSV formula-injection escaping; security headers; atomic conditional ledger updates; audit log for every sensitive action; webhook signature verification with timestamp tolerance; provider secrets server-only.
 
 ## Testing
 
 ```bash
 npm run typecheck && npm run lint && npm run build
-npm run dev   # then, in another terminal:
-npm run test:e2e
+npm run dev            # in another terminal
+npm run test:e2e       # 124 checks against the running server
 ```
 
-`scripts/e2e-test.ts` runs 94 checks against a live server. They cover registration, login, admin login, account management, deposits, purchases, sales, withdrawals, transaction history, statements, RBAC, CSRF, MFA, password reset and rate limiting. It creates the first super admin via `/admin/setup` if none exists; otherwise set `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`. It trips the admin-login rate limit at the end, so wait 5 minutes (or clear the `RateLimit` table) before signing in as admin from the same IP.
-
-## Project layout
-
-```
-prisma/            schema, migrations, demo seed
-scripts/           admin bootstrap CLI, e2e tests
-src/app/(site)     public pages: landing, TSLA, learn, FAQ, support, legal
-src/app/(auth)     customer login / register / verify / reset
-src/app/app        customer dashboard
-src/app/admin      admin auth + (console) pages
-src/app/api        REST endpoints (customer + /api/admin)
-src/server         db, auth/session, permissions, security, broker adapter, services
-src/components     UI kit, charts, shells, forms
-src/proxy.ts       early redirects for unauthenticated /app and /admin visits
-```
+The e2e script covers registration, verification, login, admin setup/login, admin route isolation, deposits (bad signatures, spoofed-but-signed events, duplicate events, declined cards, cancellations, under-paid transfers, re-checks), KYC, buys, sells, withdrawals (approve/reject/cancel/refund), history, PDF statements, balance corrections, support requests, RBAC, CSRF, MFA, password reset and rate limiting. If a super admin already exists, set `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`. It trips the admin-login rate limit at the end (wait 5 minutes or clear the `RateLimit` table).

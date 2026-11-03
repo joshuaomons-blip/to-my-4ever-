@@ -12,7 +12,7 @@ export default async function AdminMfaPage({ searchParams }: { searchParams: Pro
   if (!(await getPendingMfa('admin'))) redirect('/admin/login')
   return (
     <>
-      <AuthTitle icon={<ShieldCheck className="mb-6 size-10 text-silver" />} title="Verify it’s you" subtitle="Enter the 6-digit code from your authenticator app." />
+      <AuthTitle icon={<ShieldCheck className="mb-6 size-10 text-fg-2" />} title="Verify it’s you" subtitle="Enter the 6-digit code from your authenticator app." />
       <MfaForm scope="admin" next={next} />
     </>
   )

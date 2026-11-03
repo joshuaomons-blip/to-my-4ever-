@@ -36,19 +36,19 @@ export default async function MarketsPage() {
   return (
     <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
       <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-        <div className="animate-fade-up">
+        <div className="">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-2xl border border-white/10 bg-carbon font-display text-sm font-bold">T</span>
+            <span className="grid size-11 place-items-center rounded-lg border border-fg/10 bg-surface font-display text-sm font-bold">T</span>
             <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight">Tesla, Inc. <span className="text-mute">(TSLA)</span></h1>
-              <p className="text-xs text-dim">Nasdaq · USD · Consumer cyclical / Auto manufacturers</p>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">Tesla, Inc. <span className="text-muted">(TSLA)</span></h1>
+              <p className="text-xs text-faint">Nasdaq · USD · Consumer cyclical / Auto manufacturers</p>
             </div>
-            <SimBadge>Sandbox feed</SimBadge>
+            <SimBadge>Simulated price</SimBadge>
           </div>
           <LiveQuote initial={quote} className="mt-6" />
         </div>
         <div className="flex gap-2">
-          <ButtonLink href={user ? '/app/trade' : '/register'} size="lg">{user ? 'Trade in sandbox' : 'Practise trading TSLA'}</ButtonLink>
+          <ButtonLink href={user ? '/account/trade' : '/register'} size="lg">{user ? 'Trade TSLA' : 'Open an account'}</ButtonLink>
         </div>
       </div>
 
@@ -58,15 +58,15 @@ export default async function MarketsPage() {
         </Card>
         <Card className="p-6">
           <p className="eyebrow mb-4">Key statistics</p>
-          <dl className="divide-y divide-white/[0.05]">
+          <dl className="divide-y divide-fg/[0.05]">
             {metrics.map(([k, v]) => (
               <div key={k} className="flex justify-between py-2.5 text-sm">
-                <dt className="text-mute">{k}</dt>
-                <dd className="num text-white">{v}</dd>
+                <dt className="text-muted">{k}</dt>
+                <dd className="num text-fg">{v}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-4 text-[11px] leading-relaxed text-dim">Statistics derive from the sandbox price feed and are not real-time market data.</p>
+          <p className="mt-4 text-[11px] leading-relaxed text-faint">Statistics come from the simulated price feed and are not real-time market data.</p>
         </Card>
       </div>
 
@@ -74,7 +74,7 @@ export default async function MarketsPage() {
         <Card className="lg:col-span-2">
           <CardHeader title="Company overview" subtitle="Public background information, for education" />
           <div className="grid gap-6 p-6 sm:grid-cols-2">
-            <p className="text-sm leading-relaxed text-mute sm:col-span-2">
+            <p className="text-sm leading-relaxed text-muted sm:col-span-2">
               Tesla, Inc. designs, develops, manufactures and sells electric vehicles, and stationary energy generation and storage systems. Founded in 2003 and headquartered in Austin, Texas, the company went public on the Nasdaq in 2010. Its share price has historically been driven by delivery numbers, margins, product launches, autonomy and energy expectations, and broad interest-rate sentiment.
             </p>
             {[
@@ -86,10 +86,10 @@ export default async function MarketsPage() {
               const I = Icon as typeof Factory
               return (
                 <div key={title as string} className="flex gap-4">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-silver"><I className="size-[18px]" /></span>
+                  <span className="grid size-10 shrink-0 place-items-center rounded-md bg-fg/[0.04] text-fg-2"><I className="size-[18px]" /></span>
                   <div>
                     <p className="text-sm font-medium">{title as string}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-mute">{body as string}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted">{body as string}</p>
                   </div>
                 </div>
               )
@@ -101,21 +101,21 @@ export default async function MarketsPage() {
           <dl className="grid grid-cols-2 gap-px p-6">
             {FINANCIALS.map(([k, v]) => (
               <div key={k} className="py-2.5">
-                <dt className="text-[11px] text-dim">{k}</dt>
-                <dd className="num mt-0.5 text-sm text-white">{v}</dd>
+                <dt className="text-[11px] text-faint">{k}</dt>
+                <dd className="num mt-0.5 text-sm text-fg">{v}</dd>
               </div>
             ))}
           </dl>
-          <p className="px-6 pb-6 text-[11px] leading-relaxed text-dim">Figures are illustrative for learning purposes and may not reflect the company’s latest filings. Consult official SEC filings for accurate data.</p>
+          <p className="px-6 pb-6 text-[11px] leading-relaxed text-faint">Figures are illustrative for learning purposes and may not reflect the company’s latest filings. Consult official SEC filings for accurate data.</p>
         </Card>
       </div>
 
       <Card className="mt-6 p-6 sm:p-8" id="risk">
         <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <span className="grid size-11 place-items-center rounded-2xl bg-warn/10 text-warn"><TriangleAlert className="size-5" /></span>
+            <span className="grid size-11 place-items-center rounded-lg bg-warn/10 text-warn"><TriangleAlert className="size-5" /></span>
             <h2 className="mt-5 font-display text-2xl font-semibold tracking-tight">Risk & volatility</h2>
-            <p className="mt-3 text-sm leading-relaxed text-mute">TSLA has historically been significantly more volatile than the broad market. Large daily moves are common, and drawdowns of 50% or more have occurred.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">TSLA has historically been significantly more volatile than the broad market. Large daily moves are common, and drawdowns of 50% or more have occurred.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
@@ -124,10 +124,10 @@ export default async function MarketsPage() {
               ['Concentration risk', 'High', 'Holding one stock exposes you to company-specific events. Diversification reduces this.'],
               ['Valuation sensitivity', 'High', 'Growth expectations make the price sensitive to interest rates and guidance changes.'],
             ].map(([k, v, d]) => (
-              <div key={k} className="rounded-2xl border border-white/[0.06] p-5">
-                <div className="flex items-center gap-2 text-xs text-mute"><Gauge className="size-3.5" />{k}</div>
-                <p className="num mt-2 text-xl text-white">{v}</p>
-                <p className="mt-1.5 text-xs leading-relaxed text-dim">{d}</p>
+              <div key={k} className="rounded-lg border border-fg/[0.06] p-5">
+                <div className="flex items-center gap-2 text-xs text-muted"><Gauge className="size-3.5" />{k}</div>
+                <p className="num mt-2 text-xl text-fg">{v}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-faint">{d}</p>
               </div>
             ))}
           </div>

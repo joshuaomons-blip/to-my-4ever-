@@ -41,26 +41,26 @@ export default async function AdminTxDetail({ params }: { params: Promise<{ id: 
   ]
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/admin/transactions" className="mb-6 inline-flex items-center gap-1.5 text-sm text-mute hover:text-white"><ArrowLeft className="size-4" /> Transactions</Link>
+      <Link href="/admin/transactions" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"><ArrowLeft className="size-4" /> Transactions</Link>
       <Card>
-        <div className="flex flex-wrap items-center gap-4 border-b border-white/[0.06] p-6">
+        <div className="flex flex-wrap items-center gap-4 border-b border-fg/[0.06] p-6">
           <TxIcon type={t.type} />
           <div className="flex-1">
             <p className="font-display text-lg">{TX_LABEL[t.type]} · <span className="num">{usdFmt(t.amount)}</span></p>
-            <p className="num text-xs text-dim">{t.reference}</p>
+            <p className="num text-xs text-faint">{t.reference}</p>
           </div>
           <StatusBadge status={t.status} />
           <SimBadge>Simulated</SimBadge>
         </div>
         {t.type === 'WITHDRAWAL' && t.status === 'PENDING' && can(admin, 'withdrawals:review') && (
-          <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] bg-warn/[0.04] px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-fg/[0.06] bg-warn/[0.04] px-6 py-4">
             <p className="text-sm text-warn">This withdrawal is awaiting review.</p>
             <ReviewButtons kind="withdrawal" endpoint={`/api/admin/withdrawals/${t.id}`} subject={`${usdFmt(t.amount)} · ${t.reference}`} />
           </div>
         )}
-        <dl className="divide-y divide-white/[0.05] px-6">
+        <dl className="divide-y divide-fg/[0.05] px-6">
           {lines.map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-6 py-3 text-sm"><dt className="shrink-0 text-mute">{k}</dt><dd className="num text-right text-xs break-all">{k === 'Customer' ? <Link href={`/admin/customers/${row.user.id}`} className="hover:underline">{v}</Link> : v}</dd></div>
+            <div key={k} className="flex justify-between gap-6 py-3 text-sm"><dt className="shrink-0 text-muted">{k}</dt><dd className="num text-right text-xs break-all">{k === 'Customer' ? <Link href={`/admin/customers/${row.user.id}`} className="hover:underline">{v}</Link> : v}</dd></div>
           ))}
         </dl>
       </Card>
@@ -69,9 +69,9 @@ export default async function AdminTxDetail({ params }: { params: Promise<{ id: 
         {trail.length === 0 ? <EmptyState title="No audit events for this transaction" description="Seeded demo transactions are created without audit events." /> : (
           <ol className="mt-4 space-y-3 px-6 pb-6">
             {trail.map((a) => (
-              <li key={a.id} className="border-l-2 border-white/10 pl-3">
-                <p className="num text-xs text-white">{a.action}</p>
-                <p className="text-[11px] text-dim">{a.actorEmail ?? 'system'} · {a.ip ?? '—'} · {dateTimeFmt(a.createdAt)}</p>
+              <li key={a.id} className="border-l-2 border-fg/10 pl-3">
+                <p className="num text-xs text-fg">{a.action}</p>
+                <p className="text-[11px] text-faint">{a.actorEmail ?? 'system'} · {a.ip ?? '—'} · {dateTimeFmt(a.createdAt)}</p>
               </li>
             ))}
           </ol>

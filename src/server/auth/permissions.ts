@@ -7,6 +7,10 @@ export const PERMISSIONS = {
   'transactions:read': 'View all transactions',
   'transactions:export': 'Export transaction reports',
   'withdrawals:review': 'Approve or reject withdrawals',
+  'payments:review': 'View deposits and payment-provider events, re-check deposit status',
+  'ledger:adjust': 'Request balance corrections (applied instantly in demo mode)',
+  'ledger:approve': 'Approve corrections to real-money records (second approver)',
+  'support:manage': 'Read and answer customer support tickets',
   'content:manage': 'Manage website content, announcements, FAQ and notifications',
   'settings:manage': 'Change platform branding, fees and limits',
   'admins:manage': 'Create administrators and assign permissions',
@@ -25,10 +29,13 @@ export const ROLE_DEFAULTS: Record<Exclude<Role, 'CUSTOMER'>, Permission[]> = {
     'transactions:read',
     'transactions:export',
     'withdrawals:review',
+    'payments:review',
+    'ledger:adjust',
     'content:manage',
+    'support:manage',
     'audit:read',
   ],
-  SUPPORT: ['customers:read', 'transactions:read', 'kyc:review'],
+  SUPPORT: ['customers:read', 'transactions:read', 'kyc:review', 'support:manage'],
 }
 
 export const ADMIN_ROLES: Role[] = ['SUPPORT', 'ADMIN', 'SUPER_ADMIN']

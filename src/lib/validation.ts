@@ -44,7 +44,30 @@ export const kycSchema = z.object({
 })
 
 const money = (min: number, max: number) => z.number('Enter an amount').finite().min(min, 'Enter an amount').max(max, 'Amount too large')
-export const depositSchema = z.object({ amount: money(0.01, 10_000_000).transform((v) => Math.round(v * 100) / 100), method: z.string().max(40) })
+export const depositSchema = z.object({
+  amount: money(0.01, 10_000_000).transform((v) => Math.round(v * 100) / 100),
+  method: z.enum(['BANK_TRANSFER', 'CARD'], 'Choose a payment method'),
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9-]{16,64}$/, 'Invalid request key'),
+})
+
+export const TICKET_CATEGORIES = ['Account access', 'Funding', 'Withdrawals', 'Trading', 'Verification', 'Statements', 'Other'] as const
+export const ticketSchema = z.object({
+  subject: z.string().trim().min(4, 'Add a short subject').max(120),
+  category: z.enum(TICKET_CATEGORIES),
+  message: z.string().trim().min(10, 'Describe the issue in a little more detail').max(4000),
+})
+export const ticketReplySchema = z.object({ body: z.string().trim().min(2, 'Write a reply').max(4000) })
+
+export const adjustmentSchema = z.object({
+  amount: z
+    .number('Enter an amount')
+    .finite()
+    .refine((v) => v !== 0, 'Amount cannot be zero')
+    .refine((v) => Math.abs(v) <= 1_000_000, 'Amount too large')
+    .transform((v) => Math.round(v * 100) / 100),
+  reason: z.string().trim().min(10, 'Explain the correction (10+ characters)').max(500),
+  evidence: z.string().trim().max(200).optional(),
+})
 export const withdrawSchema = z.object({ amount: money(0.01, 10_000_000).transform((v) => Math.round(v * 100) / 100), note: z.string().trim().max(200).optional() })
 export const tradeSchema = z.object({
   side: z.enum(['buy', 'sell']),

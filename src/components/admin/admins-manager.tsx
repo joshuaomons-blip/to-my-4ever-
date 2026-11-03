@@ -3,12 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Copy, KeyRound, Pencil, UserPlus } from 'lucide-react'
-import { Alert, Badge, Button, Field, Input, Select, StatusBadge, Table, td, th } from '@/components/ui'
+import { Alert, Badge, Button, Field, Input, Select, StatusBadge, Table, td, th, RelTime } from '@/components/ui'
 import { Modal } from '@/components/modal'
 import { useForm } from '@/components/use-form'
 import { useToast } from '@/components/toast'
 import { api } from '@/lib/api'
-import { cn, relTime } from '@/lib/format'
+import { cn } from '@/lib/format'
 
 type AdminRow = { id: string; email: string; firstName: string; lastName: string; role: string; status: string; permissions: string[]; totpEnabled: boolean; lastLoginAt: string | null }
 type Perms = Record<string, string>
@@ -17,9 +17,9 @@ function PermissionPicker({ value, onChange, perms, disabled }: { value: string[
   return (
     <div className="grid gap-1.5 sm:grid-cols-2">
       {Object.entries(perms).filter(([k]) => k !== 'admins:manage').map(([k, desc]) => (
-        <label key={k} className={cn('flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-xs', value.includes(k) ? 'border-white/25 bg-white/[0.04]' : 'border-white/[0.06]', disabled && 'pointer-events-none opacity-50')}>
+        <label key={k} className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-3 text-xs', value.includes(k) ? 'border-fg/25 bg-fg/[0.04]' : 'border-fg/[0.06]', disabled && 'pointer-events-none opacity-50')}>
           <input type="checkbox" className="mt-0.5 accent-[var(--color-accent)]" checked={disabled || value.includes(k)} disabled={disabled} onChange={(e) => onChange(e.target.checked ? [...value, k] : value.filter((p) => p !== k))} />
-          <span><span className="num block text-silver">{k}</span><span className="text-dim">{desc}</span></span>
+          <span><span className="num block text-fg-2">{k}</span><span className="text-faint">{desc}</span></span>
         </label>
       ))}
     </div>
@@ -31,7 +31,7 @@ function TempPassword({ value, onClose }: { value: string; onClose: () => void }
   return (
     <div className="space-y-4">
       <Alert tone="warn" title="Shown once">Share this temporary password through a secure channel. Ask the administrator to change it and enable 2FA at first sign-in.</Alert>
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-ink p-3">
+      <div className="flex items-center gap-2 rounded-md border border-fg/10 bg-canvas p-3">
         <code className="num flex-1 text-sm break-all">{value}</code>
         <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(value); toast({ tone: 'success', title: 'Copied' }) }}><Copy className="size-3.5" /></Button>
       </div>
@@ -53,16 +53,16 @@ export function AdminsManager({ rows, perms, roleDefaults, selfId }: { rows: Adm
     <>
       <div className="flex justify-end p-5"><Button onClick={() => setCreating(true)}><UserPlus className="size-4" /> Add administrator</Button></div>
       <Table>
-        <thead className="border-b border-white/[0.06]"><tr><th className={th}>Administrator</th><th className={th}>Role</th><th className={th}>Status</th><th className={th}>2FA</th><th className={th}>Permissions</th><th className={th}>Last login</th><th className={th} /></tr></thead>
-        <tbody className="divide-y divide-white/[0.04]">
+        <thead className="border-b border-fg/[0.06]"><tr><th className={th}>Administrator</th><th className={th}>Role</th><th className={th}>Status</th><th className={th}>2FA</th><th className={th}>Permissions</th><th className={th}>Last login</th><th className={th} /></tr></thead>
+        <tbody className="divide-y divide-fg/[0.04]">
           {rows.map((a) => (
-            <tr key={a.id} className="hover:bg-white/[0.02]">
-              <td className={td}><p className="text-sm font-medium">{a.firstName} {a.lastName} {a.id === selfId && <Badge className="ml-1">You</Badge>}</p><p className="text-[11px] text-dim">{a.email}</p></td>
+            <tr key={a.id} className="hover:bg-fg/[0.02]">
+              <td className={td}><p className="text-sm font-medium">{a.firstName} {a.lastName} {a.id === selfId && <Badge className="ml-1">You</Badge>}</p><p className="text-[11px] text-faint">{a.email}</p></td>
               <td className={td}><Badge tone={a.role === 'SUPER_ADMIN' ? 'accent' : 'neutral'}>{a.role.replace('_', ' ')}</Badge></td>
               <td className={td}><StatusBadge status={a.status} /></td>
               <td className={td}>{a.totpEnabled ? <Badge tone="gain">On</Badge> : <Badge tone="warn">Off</Badge>}</td>
-              <td className={cn(td, 'text-xs text-mute')}>{a.role === 'SUPER_ADMIN' ? 'All' : `${a.permissions.length} granted`}</td>
-              <td className={cn(td, 'text-xs text-mute')}>{a.lastLoginAt ? relTime(a.lastLoginAt) : 'Never'}</td>
+              <td className={cn(td, 'text-xs text-muted')}>{a.role === 'SUPER_ADMIN' ? 'All' : `${a.permissions.length} granted`}</td>
+              <td className={cn(td, 'text-xs text-muted')}>{a.lastLoginAt ? <RelTime date={a.lastLoginAt} /> : 'Never'}</td>
               <td className={cn(td, 'text-right')}>
                 <div className="flex justify-end gap-1.5">
                   <Button size="sm" variant="ghost" onClick={() => { setEditing(a); edit.setValues({ role: a.role, permissions: a.permissions, status: a.status }) }}><Pencil className="size-3.5" /> Edit</Button>
@@ -103,7 +103,7 @@ export function AdminsManager({ rows, perms, roleDefaults, selfId }: { rows: Adm
               </Select>
             </Field>
           </div>
-          <div><p className="mb-2 text-xs font-medium text-silver">Permissions</p><PermissionPicker perms={perms} value={create.values.permissions} disabled={create.values.role === 'SUPER_ADMIN'} onChange={(v) => create.set('permissions', v)} /></div>
+          <div><p className="mb-2 text-xs font-medium text-fg-2">Permissions</p><PermissionPicker perms={perms} value={create.values.permissions} disabled={create.values.role === 'SUPER_ADMIN'} onChange={(v) => create.set('permissions', v)} /></div>
           <Button type="submit" variant="light" className="w-full" loading={create.loading}>Create & generate temporary password</Button>
         </form>
       </Modal>
@@ -123,7 +123,7 @@ export function AdminsManager({ rows, perms, roleDefaults, selfId }: { rows: Adm
               <Field label="Role" htmlFor="ea-role"><Select id="ea-role" value={edit.values.role} onChange={(e) => edit.set('role', e.target.value)}><option value="SUPPORT">Support</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super admin</option></Select></Field>
               <Field label="Status" htmlFor="ea-st"><Select id="ea-st" value={edit.values.status} onChange={(e) => edit.set('status', e.target.value)}><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option></Select></Field>
             </div>
-            <div><p className="mb-2 text-xs font-medium text-silver">Permissions</p><PermissionPicker perms={perms} value={edit.values.permissions} disabled={edit.values.role === 'SUPER_ADMIN'} onChange={(v) => edit.set('permissions', v)} /></div>
+            <div><p className="mb-2 text-xs font-medium text-fg-2">Permissions</p><PermissionPicker perms={perms} value={edit.values.permissions} disabled={edit.values.role === 'SUPER_ADMIN'} onChange={(v) => edit.set('permissions', v)} /></div>
             <Button type="submit" variant="light" className="w-full" loading={edit.loading}>Save changes</Button>
           </form>
         )}

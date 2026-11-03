@@ -2,13 +2,13 @@ import 'server-only'
 import type { KycStatus, Prisma, TxStatus, TxType } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { getBroker } from '@/server/broker'
-import { settleDueDeposits } from './ledger'
+import { sweepDeposits } from '@/server/payments/service'
 import { toTxDTO } from './portfolio'
 
 const n = (v: unknown) => Number(v ?? 0)
 
 export async function getOverviewMetrics() {
-  await settleDueDeposits()
+  await sweepDeposits()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000)
   const [customers, active, suspended, flagged, recentLogins, pendingKyc, pendingWithdrawals, sums, holdings, quote] = await Promise.all([
     prisma.user.count({ where: { role: 'CUSTOMER' } }),
@@ -136,7 +136,7 @@ export async function getCustomerDetail(id: string) {
     },
   })
   if (!user) return null
-  await settleDueDeposits(id)
+  await sweepDeposits(id)
   const [transactions, activity] = await Promise.all([
     prisma.transaction.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 100 }),
     prisma.auditLog.findMany({
@@ -181,7 +181,7 @@ export function txWhere(f: TxFilters): Prisma.TransactionWhereInput {
 }
 
 export async function listTransactions(f: TxFilters, pageSize = 20) {
-  await settleDueDeposits()
+  await sweepDeposits()
   const where = txWhere(f)
   const page = Math.max(1, f.page ?? 1)
   const [total, rows, agg] = await Promise.all([

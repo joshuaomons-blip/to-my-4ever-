@@ -13,7 +13,7 @@ export default async function AdminSetupPage() {
   const configured = (process.env.ADMIN_SETUP_TOKEN ?? '').length >= 32
   return (
     <>
-      <AuthTitle icon={<KeyRound className="mb-6 size-10 text-silver" />} title="Secure initial setup" subtitle="Create the first super administrator. This page permanently disables itself once complete." />
+      <AuthTitle icon={<KeyRound className="mb-6 size-10 text-fg-2" />} title="Secure initial setup" subtitle="Create the first super administrator. This page permanently disables itself once complete." />
       {done ? (
         <Alert tone="neutral" title="Setup already completed">
           A super administrator exists. <Link href="/admin/login" className="underline">Sign in</Link> instead. Additional admins are created from the console.

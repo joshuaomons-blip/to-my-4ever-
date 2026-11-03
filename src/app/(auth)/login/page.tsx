@@ -10,10 +10,10 @@ export const metadata: Metadata = { title: 'Sign in' }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; reset?: string }> }) {
   const sp = await searchParams
-  if (await getCurrentUser('customer')) redirect('/app')
+  if (await getCurrentUser('customer')) redirect('/account')
   return (
     <>
-      <AuthTitle title="Welcome back" subtitle={<>New here? <Link href="/register" className="text-white underline-offset-4 hover:underline">Open a sandbox account</Link></>} />
+      <AuthTitle title="Welcome back" subtitle={<>New here? <Link href="/register" className="text-fg underline-offset-4 hover:underline">Open an account</Link></>} />
       {sp.reset && <Alert tone="gain" className="mb-4">Password updated. Sign in with your new password.</Alert>}
       <LoginForm scope="customer" next={sp.next} />
     </>

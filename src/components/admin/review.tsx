@@ -38,7 +38,7 @@ export function ReviewButtons({ kind, endpoint, subject }: { kind: 'kyc' | 'with
       </div>
       <Modal open={!!decision} onClose={close} title={`${decision === 'approve' ? 'Approve' : 'Reject'} ${kind === 'kyc' ? 'verification' : 'withdrawal'}`}>
         <form onSubmit={submit} className="space-y-4">
-          <p className="text-sm text-mute">{subject}</p>
+          <p className="text-sm text-muted">{subject}</p>
           {f.error && <Alert tone="loss">{f.error}</Alert>}
           {kind === 'kyc' && decision === 'reject' && (
             <Field label="Reason shown to customer (required)" error={f.errors.reason} htmlFor="rv-reason">
@@ -48,7 +48,7 @@ export function ReviewButtons({ kind, endpoint, subject }: { kind: 'kyc' | 'with
           <Field label={kind === 'withdrawal' && decision === 'reject' ? 'Administrative note (required)' : 'Internal review note (optional)'} error={f.errors.note} htmlFor="rv-note" hint={kind === 'withdrawal' ? 'Shown to the customer and stored in the audit trail.' : 'Visible to administrators only.'}>
             <Textarea id="rv-note" maxLength={1000} value={f.values.note} onChange={(e) => f.set('note', e.target.value)} />
           </Field>
-          {kind === 'withdrawal' && decision === 'approve' && <Alert tone="info">Approving marks the simulated transfer as completed via the sandbox broker adapter. No real money moves.</Alert>}
+          {kind === 'withdrawal' && decision === 'approve' && <Alert tone="info">Approving pays the withdrawal out: in test mode it is simulated; with live payments it is refunded to the customer’s original payment method through the provider.</Alert>}
           {kind === 'withdrawal' && decision === 'reject' && <Alert tone="warn">Rejecting returns the reserved funds to the customer’s cash balance.</Alert>}
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="ghost" onClick={close} disabled={f.loading}>Cancel</Button>

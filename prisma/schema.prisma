@@ -35,6 +35,34 @@ enum TxType {
   WITHDRAWAL
   BUY
   SELL
+  /// Documented ledger correction (signed amount).
+  ADJUSTMENT
+}
+
+enum DepositStatus {
+  AWAITING_PAYMENT
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+}
+
+enum AdjustmentStatus {
+  PENDING_APPROVAL
+  APPLIED
+  REJECTED
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
 }
 
 enum TxStatus {
@@ -83,6 +111,12 @@ model User {
   notesAbout    AdminNote[]         @relation("noteSubject")
   reviewedTx    Transaction[]       @relation("txReviewer")
   reviewedKyc   KycSubmission[]     @relation("kycReviewer")
+  deposits      DepositRequest[]
+  adjustments   LedgerAdjustment[]  @relation("adjustmentSubject")
+  adjRequested  LedgerAdjustment[]  @relation("adjustmentRequester")
+  adjDecided    LedgerAdjustment[]  @relation("adjustmentApprover")
+  tickets       SupportTicket[]
+  ticketReplies SupportMessage[]
 
   @@index([role, status])
   @@index([createdAt])
@@ -140,32 +174,36 @@ model KycSubmission {
 }
 
 model Transaction {
-  id           String    @id @default(cuid())
-  reference    String    @unique
+  id           String            @id @default(cuid())
+  reference    String            @unique
   userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   type         TxType
-  status       TxStatus  @default(PENDING)
+  status       TxStatus          @default(PENDING)
   symbol       String?
   /// Gross cash amount (USD). For BUY: notional spent excl. fee. For SELL: proceeds excl. fee.
-  amount       Decimal   @db.Decimal(18, 2)
-  fee          Decimal   @default(0) @db.Decimal(18, 2)
-  shares       Decimal?  @db.Decimal(20, 6)
-  price        Decimal?  @db.Decimal(14, 4)
+  amount       Decimal           @db.Decimal(18, 2)
+  fee          Decimal           @default(0) @db.Decimal(18, 2)
+  shares       Decimal?          @db.Decimal(20, 6)
+  price        Decimal?          @db.Decimal(14, 4)
   /// Sandbox payment method label only (e.g. "Sandbox ACH"). Never real credentials.
   method       String?
   brokerRef    String?
-  brokerMode   String    @default("sandbox")
+  brokerMode   String            @default("sandbox")
   /// True for demo seed data.
-  isSeed       Boolean   @default(false)
+  isSeed       Boolean           @default(false)
   customerNote String?
   adminNote    String?
   reviewerId   String?
-  reviewer     User?     @relation("txReviewer", fields: [reviewerId], references: [id])
+  reviewer     User?             @relation("txReviewer", fields: [reviewerId], references: [id])
   reviewedAt   DateTime?
   settlesAt    DateTime?
   completedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime          @default(now())
+  /// True only when the money behind this entry is real (live payment provider).
+  livemode     Boolean           @default(false)
+  deposit      DepositRequest?
+  adjustment   LedgerAdjustment?
 
   @@index([userId, createdAt])
   @@index([type, status])
@@ -285,4 +323,130 @@ model RateLimit {
   key         String   @id
   count       Int
   windowStart DateTime
+}
+
+/// A customer's request to fund their account through a payment provider.
+/// The account is credited only after the provider's signed webhook is verified
+/// AND the payment is independently re-confirmed with the provider's API.
+model DepositRequest {
+  id                String         @id @default(cuid())
+  reference         String         @unique
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  livemode          Boolean        @default(false)
+  method            PaymentMethod
+  amount            Decimal        @db.Decimal(18, 2)
+  currency          String         @default("usd")
+  status            DepositStatus  @default(AWAITING_PAYMENT)
+  /// Client-supplied key that makes "create deposit" safe to retry.
+  idempotencyKey    String
+  providerSessionId String?        @unique
+  providerPaymentId String?        @unique
+  checkoutUrl       String?
+  instructions      Json?
+  receivedAmount    Decimal?       @db.Decimal(18, 2)
+  /// Amount already returned to the original payment method (withdrawals in live mode).
+  refundedAmount    Decimal        @default(0) @db.Decimal(18, 2)
+  failureReason     String?
+  transactionId     String?        @unique
+  transaction       Transaction?   @relation(fields: [transactionId], references: [id])
+  isSeed            Boolean        @default(false)
+  expiresAt         DateTime
+  succeededAt       DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  events            PaymentEvent[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
+}
+
+/// Every webhook received from a payment provider, kept for audit and duplicate protection.
+model PaymentEvent {
+  id             String          @id @default(cuid())
+  provider       String
+  eventId        String
+  type           String
+  depositId      String?
+  deposit        DepositRequest? @relation(fields: [depositId], references: [id], onDelete: SetNull)
+  signatureValid Boolean
+  /// Payment re-confirmed with the provider API before acting on the event.
+  verified       Boolean         @default(false)
+  /// processed | duplicate | ignored | rejected | error
+  outcome        String
+  message        String?
+  payload        Json
+  receivedAt     DateTime        @default(now())
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
+}
+
+/// Payments as seen by the built-in TEST provider (stands in for the provider's own records).
+model TestProviderPayment {
+  id        String   @id
+  sessionId String
+  amount    Decimal  @db.Decimal(18, 2)
+  currency  String   @default("usd")
+  /// succeeded | failed
+  status    String
+  reason    String?
+  refunded  Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
+
+/// Documented balance correction. Demo-mode corrections apply immediately;
+/// corrections to real-money records require approval by a second administrator.
+model LedgerAdjustment {
+  id            String           @id @default(cuid())
+  reference     String           @unique
+  userId        String
+  user          User             @relation("adjustmentSubject", fields: [userId], references: [id], onDelete: Cascade)
+  amount        Decimal          @db.Decimal(18, 2)
+  reason        String
+  evidence      String?
+  livemode      Boolean          @default(false)
+  status        AdjustmentStatus @default(PENDING_APPROVAL)
+  requestedById String?
+  requestedBy   User?            @relation("adjustmentRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  approverId    String?
+  approver      User?            @relation("adjustmentApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  decisionNote  String?
+  decidedAt     DateTime?
+  transactionId String?          @unique
+  transaction   Transaction?     @relation(fields: [transactionId], references: [id])
+  createdAt     DateTime         @default(now())
+
+  @@index([status])
+}
+
+model SupportTicket {
+  id        String           @id @default(cuid())
+  reference String           @unique
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String
+  status    TicketStatus     @default(OPEN)
+  messages  SupportMessage[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  fromStaff Boolean       @default(false)
+  body      String
+  createdAt DateTime      @default(now())
 }

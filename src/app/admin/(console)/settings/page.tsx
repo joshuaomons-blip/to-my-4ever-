@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const broker = getBroker()
   return (
     <>
-      <PageHeader eyebrow="Platform" title="Settings" description="Branding, appearance, simulated trading economics and security policy." />
+      <PageHeader title="Settings" description="Branding, appearance, simulated trading economics and security policy." />
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="Branding" subtitle="Platform name and logo" />
@@ -25,7 +25,7 @@ export default async function SettingsPage() {
           <div className="p-6"><AppearanceForm initial={s.appearance} accents={ACCENTS} /></div>
         </Card>
         <Card>
-          <CardHeader title="Simulated trading fees & limits" subtitle="Applied to every new sandbox order, deposit and withdrawal" />
+          <CardHeader title="Simulated trading fees & limits" subtitle="Applied to every new order, deposit and withdrawal" />
           <div className="p-6">
             <SettingsForm settingKey="trading" initial={s.trading} cols={2} fields={[
               { name: 'feeBps', label: 'Trading fee', type: 'number', suffix: 'bps', min: 0, max: 500, hint: '10 bps = 0.10% of order value' },
@@ -49,8 +49,8 @@ export default async function SettingsPage() {
           </Card>
           <Card>
             <CardHeader title="Brokerage adapter" subtitle="Configured on the server via BROKER_MODE" action={<Badge tone={broker.simulated ? 'accent' : 'gain'} dot>{broker.mode}</Badge>} />
-            <div className="space-y-2 p-6 text-sm text-mute">
-              <p><span className="text-white">{broker.label}.</span> All deposits, withdrawals and orders pass through this adapter.</p>
+            <div className="space-y-2 p-6 text-sm text-muted">
+              <p><span className="text-fg">{broker.label}.</span> All deposits, withdrawals and orders pass through this adapter.</p>
               <p>Live adapters (Alpaca Broker API, DriveWealth) are deliberately not implemented. Connecting one requires a licensed broker-dealer agreement, regulated KYC/AML and funding rails, server-side secrets and compliance review.</p>
             </div>
           </Card>

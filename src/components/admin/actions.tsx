@@ -61,7 +61,7 @@ export function ReasonAction({
             }
           }}
         >
-          {description && <p className="text-sm text-mute">{description}</p>}
+          {description && <p className="text-sm text-muted">{description}</p>}
           {f.error && <Alert tone="loss">{f.error}</Alert>}
           <Field label={required ? 'Reason (required, recorded in audit log)' : 'Note (optional, recorded in audit log)'} error={f.errors[field]} htmlFor="reason-text">
             <Textarea id="reason-text" maxLength={500} value={f.values.text} onChange={(e) => f.set('text', e.target.value)} placeholder={placeholder} />

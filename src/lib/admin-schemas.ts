@@ -3,7 +3,8 @@ import { emailSchema } from './validation'
 
 export const PERMISSION_KEYS = [
   'customers:read', 'customers:manage', 'kyc:review', 'transactions:read', 'transactions:export',
-  'withdrawals:review', 'content:manage', 'settings:manage', 'admins:manage', 'audit:read',
+  'withdrawals:review', 'payments:review', 'ledger:adjust', 'ledger:approve', 'support:manage',
+  'content:manage', 'settings:manage', 'admins:manage', 'audit:read',
 ] as const
 
 export const announcementSchema = z.object({

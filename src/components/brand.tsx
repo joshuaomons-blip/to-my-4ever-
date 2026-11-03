@@ -6,9 +6,8 @@ export type Branding = { platformName: string; tagline: string; logoDataUrl: str
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={cn('size-7', className)} aria-hidden>
-      <rect width="32" height="32" rx="9" fill="#121212" stroke="rgba(255,255,255,.08)" />
-      <path d="M7 22 L13 15 L17 18.5 L25 9.5" stroke="var(--color-accent)" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="25" cy="9.5" r="2" fill="#fff" />
+      <rect width="32" height="32" rx="6" fill="#15171a" />
+      <path d="M7 21.5 L13 14.5 L17.5 18 L25 9.5" stroke="var(--color-accent)" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -18,26 +17,33 @@ export function Logo({ branding, href = '/', suffix, className }: { branding: Br
     <Link href={href} className={cn('group flex items-center gap-2.5', className)} aria-label={`${branding.platformName} home`}>
       {branding.logoDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={branding.logoDataUrl} alt="" className="size-7 rounded-lg object-contain" />
+        <img src={branding.logoDataUrl} alt="" className="size-7 rounded-md object-contain" />
       ) : (
         <LogoMark />
       )}
-      <span className="font-display text-[15px] font-semibold tracking-[-0.02em] whitespace-nowrap text-white">{branding.platformName}</span>
-      {suffix && <span className="rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-mute">{suffix}</span>}
+      <span className="display text-[16px] font-semibold whitespace-nowrap text-fg">{branding.platformName}</span>
+      {suffix && <span className="rounded-sm border border-hairline px-1.5 py-px text-[11px] font-medium text-muted">{suffix}</span>}
     </Link>
   )
 }
 
-/** Permanent disclosure — intentionally not editable from the admin console. */
-export function SandboxStrip({ className }: { className?: string }) {
+/**
+ * Permanent disclosure bar — intentionally not editable from the admin console.
+ * `live` is true only when a live payment provider is configured.
+ */
+export function SandboxStrip({ className, live = false }: { className?: string; live?: boolean }) {
   return (
-    <div className={cn('relative z-40 border-b border-accent/20 bg-gradient-to-r from-accent/[0.14] via-accent/[0.07] to-accent/[0.14] px-4 py-1.5 text-center text-[11px] text-silver', className)}>
-      <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Sandbox</span>
-      <span className="mx-2 text-dim">·</span>
-      Virtual funds and simulated trades only. Not real investments. Independent platform, not affiliated with Tesla, Inc.
+    <div className={cn('relative z-40 border-b border-hairline bg-surface px-4 py-2 text-center text-[13px] text-muted', className)}>
+      <span className="mr-2 inline-flex items-center gap-1.5 font-medium text-fg">
+        <span className={cn('size-1.5 rounded-full', live ? 'bg-gain' : 'bg-accent')} />
+        {live ? 'Live payments' : 'Test mode'}
+      </span>
+      {live
+        ? 'Share holdings and trades are simulated until a licensed brokerage is connected. Independent platform, not affiliated with Tesla, Inc.'
+        : 'Payments, balances and trades are simulated. No real money moves. Independent platform, not affiliated with Tesla, Inc.'}
     </div>
   )
 }
 
 export const DISCLOSURE =
-  'This is an independent educational sandbox. It is not affiliated with, endorsed by, or operated by Tesla, Inc. All balances, deposits, withdrawals, orders and holdings are simulated with virtual funds, carry no cash value and do not represent ownership of any security. Prices are simulated and are not real-time market data. Nothing on this site is investment, legal or tax advice. Investing in real securities involves risk, including loss of principal.'
+  'This is an independent platform. It is not affiliated with, endorsed by, or operated by Tesla, Inc. Share holdings and orders shown on this site are simulated: no shares are bought or sold on any exchange and no ownership of any security is conferred. In test mode, all payments and balances are simulated and have no cash value. Prices are simulated and are not real-time market data. Nothing on this site is investment, legal or tax advice. Investing in real securities involves risk, including loss of principal.'

@@ -125,12 +125,16 @@ async function main() {
     let shares = 0
     let cost = 0
     const txs: Prisma.TransactionCreateManyInput[] = []
+    const depositRows: { reference: string; method: 'CARD' | 'BANK_TRANSFER'; amount: number; at: Date }[] = []
     for (const [daysAgo, kind, value] of plan.events) {
       const at = new Date(now - daysAgo * DAY + (i % 7) * 3600_000)
       const base = { userId: user.id, isSeed: true, createdAt: at, brokerMode: 'sandbox' }
       if (kind === 'dep') {
         cash += value
-        txs.push({ ...base, reference: ref('DEP'), type: 'DEPOSIT', status: 'COMPLETED', amount: D(value), method: 'Sandbox ACH transfer', settlesAt: at, completedAt: at, brokerRef: `SBX-DEP-DEMO${i}${daysAgo}` })
+        const reference = ref('DEP')
+        const method = daysAgo % 2 ? 'CARD' : 'BANK_TRANSFER'
+        txs.push({ ...base, reference, type: 'DEPOSIT', status: 'COMPLETED', amount: D(value), method: `${method === 'CARD' ? 'Card payment' : 'Bank transfer'} · test provider`, completedAt: at, brokerRef: `py_test_demo${i}${daysAgo}`, brokerMode: 'test' })
+        depositRows.push({ reference, method, amount: value, at })
       } else if (kind === 'buy') {
         const price = Math.round(priceAt(at.getTime()) * 100) / 100
         const amount = Math.min(value, cash / 1.001)
@@ -162,7 +166,7 @@ async function main() {
           type: 'WITHDRAWAL',
           status: pending ? 'PENDING' : 'COMPLETED',
           amount: D(amount),
-          method: 'Sandbox ACH transfer',
+          method: 'Simulated bank transfer',
           customerNote: pending ? 'Demo withdrawal request' : null,
           completedAt: pending ? null : new Date(at.getTime() + 4 * 3600_000),
           reviewedAt: pending ? null : new Date(at.getTime() + 4 * 3600_000),
@@ -172,6 +176,58 @@ async function main() {
       }
     }
     await prisma.transaction.createMany({ data: txs })
+    // Each completed demo deposit is backed by a SUCCEEDED deposit request linked to its ledger entry.
+    for (const d of depositRows) {
+      const tx = await prisma.transaction.findUniqueOrThrow({ where: { reference: d.reference } })
+      await prisma.depositRequest.create({
+        data: {
+          reference: d.reference,
+          userId: user.id,
+          provider: 'test',
+          method: d.method,
+          amount: D(d.amount),
+          receivedAmount: D(d.amount),
+          status: 'SUCCEEDED',
+          idempotencyKey: `seed-${d.reference}`,
+          providerSessionId: `cs_test_demo_${d.reference}`,
+          providerPaymentId: `py_test_demo_${d.reference}`,
+          transactionId: tx.id,
+          isSeed: true,
+          expiresAt: new Date(d.at.getTime() + 3600_000),
+          succeededAt: d.at,
+          createdAt: new Date(d.at.getTime() - 600_000),
+        },
+      })
+    }
+    if (plan.first === 'Daniel') {
+      await prisma.depositRequest.create({
+        data: {
+          reference: ref('DEP'),
+          userId: user.id,
+          provider: 'test',
+          method: 'BANK_TRANSFER',
+          amount: D(1500),
+          status: 'AWAITING_PAYMENT',
+          idempotencyKey: `seed-open-${user.id}`,
+          providerSessionId: `cs_test_demo_open_${user.id}`,
+          instructions: { 'Account name': 'TEST MODE — do not send money', Bank: 'Test Bank (simulated)', 'Account number': '000123456789', 'Routing number': '110000000' },
+          isSeed: true,
+          expiresAt: new Date(now + 6 * DAY),
+        },
+      })
+    }
+    if (plan.first === 'Marcus') {
+      await prisma.supportTicket.create({
+        data: {
+          reference: ref('SUP'),
+          userId: user.id,
+          subject: 'When will my withdrawal be reviewed?',
+          category: 'Withdrawals',
+          createdAt: new Date(now - 2 * DAY),
+          messages: { create: [{ authorId: user.id, body: 'Hi, I requested a withdrawal a few days ago and it still shows as pending. Is there anything I need to do?', createdAt: new Date(now - 2 * DAY) }] },
+        },
+      })
+    }
     await prisma.account.create({
       data: {
         userId: user.id,
@@ -192,18 +248,18 @@ async function main() {
   if ((await prisma.faq.count()) === 0) {
     await prisma.faq.createMany({
       data: [
-        { sortOrder: 1, question: 'Is this real money?', answer: 'No. This platform is a sandbox. All balances, deposits, withdrawals and TSLA holdings are simulated with virtual funds and have no cash value.' },
-        { sortOrder: 2, question: 'Am I buying real Tesla shares?', answer: 'No. Orders are filled by a simulated broker at a simulated price. No shares are purchased on any exchange and no ownership is conferred.' },
-        { sortOrder: 3, question: 'Is this platform affiliated with Tesla, Inc.?', answer: 'No. It is an independent educational sandbox and is not endorsed by, affiliated with, or operated by Tesla, Inc.' },
-        { sortOrder: 4, question: 'Why do I need to verify my identity?', answer: 'The sandbox mirrors the onboarding steps of a real brokerage so you can practise them. Sandbox verification collects no ID numbers or document images.' },
-        { sortOrder: 5, question: 'How do fractional shares work?', answer: 'You can enter a dollar amount and the simulator calculates a fractional quantity (up to 6 decimal places) at the current simulated price.' },
-        { sortOrder: 6, question: 'How long do deposits and withdrawals take?', answer: 'Sandbox deposits settle after a short simulated clearing delay. Withdrawals are reviewed by an administrator before they are marked complete.' },
+        { sortOrder: 1, question: 'Is my money real?', answer: 'In test mode, no: payments run through a test provider and every balance is simulated. When live payments are switched on, deposits are processed by a regulated payment provider and added to your balance only after the provider confirms them.' },
+        { sortOrder: 2, question: 'Am I buying real Tesla shares?', answer: 'No. TSLA orders are filled by a simulated broker at a simulated price. No shares are bought on any exchange and no ownership is conferred.' },
+        { sortOrder: 3, question: 'Is this platform affiliated with Tesla, Inc.?', answer: 'No. It is an independent platform and is not endorsed by, affiliated with, or operated by Tesla, Inc.' },
+        { sortOrder: 4, question: 'Why do I need to verify my identity?', answer: 'We verify every customer before money can move, as regulated financial services must. We never ask you to upload ID numbers or document photos through this website.' },
+        { sortOrder: 5, question: 'How do fractional shares work?', answer: 'Enter a dollar amount and we calculate a fractional quantity, up to six decimal places, at the current simulated price.' },
+        { sortOrder: 6, question: 'How long do deposits and withdrawals take?', answer: 'Card payments are usually confirmed within a minute and bank transfers within one to three business days. Your balance changes only after the payment provider confirms the payment. Withdrawals are reviewed by our team before they are paid out.' },
       ],
     })
   }
   if ((await prisma.announcement.count()) === 0) {
     await prisma.announcement.create({
-      data: { title: 'Sandbox environment', body: 'Welcome! Everything here uses virtual funds and simulated TSLA prices — practise freely.', level: 'info', active: true },
+      data: { title: 'Welcome', body: 'Research TSLA, add funds and practise trading in your simulated portfolio. The platform is currently in test mode.', level: 'info', active: true },
     })
   }
 

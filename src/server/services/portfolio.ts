@@ -2,7 +2,8 @@ import 'server-only'
 import type { Transaction } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { getBroker, type Range } from '@/server/broker'
-import { ensureAccount, round2, settleDueDeposits } from './ledger'
+import { ensureAccount, round2 } from './ledger'
+import { sweepDeposits } from '@/server/payments/service'
 
 export type TxDTO = {
   id: string
@@ -49,13 +50,14 @@ export function toTxDTO(t: Transaction): TxDTO {
 }
 
 export async function getPortfolio(userId: string) {
-  await settleDueDeposits(userId)
+  await sweepDeposits(userId)
   const account = await ensureAccount(userId)
   const [holding, quote, sums] = await Promise.all([
     prisma.holding.findUnique({ where: { accountId_symbol: { accountId: account.id, symbol: 'TSLA' } } }),
     getBroker().getQuote('TSLA'),
     prisma.transaction.groupBy({ by: ['type', 'status'], where: { userId }, _sum: { amount: true, fee: true }, _count: true }),
   ])
+  const pendingDep = await prisma.depositRequest.aggregate({ where: { userId, status: { in: ['AWAITING_PAYMENT', 'PROCESSING'] } }, _sum: { amount: true } })
   const sum = (type: Transaction['type'], status: Transaction['status']) =>
     Number(sums.find((s) => s.type === type && s.status === status)?._sum.amount ?? 0)
 
@@ -66,7 +68,8 @@ export async function getPortfolio(userId: string) {
   const totalValue = round2(cash + marketValue)
   const deposited = sum('DEPOSIT', 'COMPLETED')
   const withdrawn = sum('WITHDRAWAL', 'COMPLETED') + sum('WITHDRAWAL', 'PENDING')
-  const netContributions = round2(deposited - withdrawn)
+  const adjustments = sum('ADJUSTMENT', 'COMPLETED')
+  const netContributions = round2(deposited - withdrawn + adjustments)
   const totalPnl = round2(totalValue - netContributions)
   const unrealizedPnl = round2(marketValue - costBasis)
 
@@ -82,7 +85,8 @@ export async function getPortfolio(userId: string) {
     invested: costBasis,
     deposited,
     withdrawn,
-    pendingDeposits: sum('DEPOSIT', 'PENDING'),
+    pendingDeposits: Number(pendingDep._sum.amount ?? 0),
+    adjustments,
     pendingWithdrawals: sum('WITHDRAWAL', 'PENDING'),
     netContributions,
     totalPnl,
@@ -113,6 +117,8 @@ export async function getPortfolioHistory(userId: string, range: Range) {
           return { at: t.createdAt.getTime(), cash: -amount, shares: 0 }
         case 'BUY':
           return { at: t.createdAt.getTime(), cash: -(amount + fee), shares }
+        case 'ADJUSTMENT':
+          return t.status === 'COMPLETED' ? { at: t.createdAt.getTime(), cash: amount, shares: 0 } : null
         case 'SELL':
           return { at: t.createdAt.getTime(), cash: amount - fee, shares: -shares }
       }

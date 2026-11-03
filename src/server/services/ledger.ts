@@ -7,11 +7,11 @@ import { ApiError } from '@/server/http'
 import { makeReference } from '@/server/security/crypto'
 import { audit } from '@/server/audit'
 import type { SafeUser } from '@/server/auth/session'
+import { paymentsConfig } from '@/server/payments/config'
+import { refundToSource } from '@/server/payments/service'
 
 const D = (n: number, dp = 2) => new Prisma.Decimal(n.toFixed(dp))
 export const round2 = (n: number) => Math.round(n * 100) / 100
-
-export const SANDBOX_METHODS = ['Sandbox ACH transfer', 'Sandbox wire transfer', 'Sandbox debit card'] as const
 
 export async function ensureAccount(userId: string) {
   const existing = await prisma.account.findUnique({ where: { userId } })
@@ -29,29 +29,6 @@ export async function ensureAccount(userId: string) {
   throw new Error('Could not allocate account number')
 }
 
-/** Settles sandbox deposits whose simulated clearing time has passed. Idempotent. */
-export async function settleDueDeposits(userId?: string) {
-  const due = await prisma.transaction.findMany({
-    where: { type: 'DEPOSIT', status: 'PENDING', settlesAt: { lte: new Date() }, ...(userId ? { userId } : {}) },
-    select: { id: true, userId: true, amount: true },
-    take: 200,
-  })
-  for (const tx of due) {
-    await prisma.$transaction(async (db) => {
-      const claimed = await db.transaction.updateMany({
-        where: { id: tx.id, status: 'PENDING' },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      })
-      if (claimed.count === 1) {
-        await db.account.update({ where: { userId: tx.userId }, data: { cashBalance: { increment: tx.amount } } })
-        await db.notification.create({
-          data: { userId: tx.userId, title: 'Sandbox deposit settled', body: `$${tx.amount.toFixed(2)} in virtual funds is now available.`, level: 'success' },
-        })
-      }
-    })
-  }
-}
-
 type Need = { emailVerified?: boolean; kyc?: boolean }
 
 async function assertCanTransact(user: SafeUser, need: Need) {
@@ -64,25 +41,6 @@ async function assertCanTransact(user: SafeUser, need: Need) {
     if (kyc?.status !== 'APPROVED') throw new ApiError(403, 'Identity verification must be approved before trading or withdrawing.')
   }
   return settings
-}
-
-export async function requestDeposit(user: SafeUser, amount: number, method: string, ip: string) {
-  const settings = await assertCanTransact(user, { emailVerified: true })
-  const { minDeposit, maxDeposit } = settings.trading
-  if (amount < minDeposit) throw new ApiError(422, `Minimum sandbox deposit is $${minDeposit}`, { amount: `Minimum is $${minDeposit}` })
-  if (amount > maxDeposit) throw new ApiError(422, `Maximum sandbox deposit is $${maxDeposit.toLocaleString()}`, { amount: `Maximum is $${maxDeposit.toLocaleString()}` })
-  if (!SANDBOX_METHODS.includes(method as (typeof SANDBOX_METHODS)[number])) throw new ApiError(422, 'Unsupported sandbox method')
-
-  const account = await ensureAccount(user.id)
-  const reference = makeReference('DEP')
-  const broker = getBroker()
-  const { brokerRef, settlesAt } = await broker.createDeposit({ accountNumber: account.accountNumber, amount, method, reference })
-  const tx = await prisma.transaction.create({
-    data: { reference, userId: user.id, type: 'DEPOSIT', status: 'PENDING', amount: D(amount), method, brokerRef, brokerMode: broker.mode, settlesAt },
-  })
-  await audit({ actor: user, action: 'deposit.requested', targetType: 'transaction', targetId: tx.id, metadata: { amount, reference }, ip })
-  if (settlesAt.getTime() <= Date.now()) await settleDueDeposits(user.id)
-  return tx
 }
 
 export async function requestWithdrawal(user: SafeUser, amount: number, note: string | undefined, ip: string) {
@@ -101,7 +59,17 @@ export async function requestWithdrawal(user: SafeUser, amount: number, note: st
     })
     if (reserved.count !== 1) throw new ApiError(422, 'Insufficient available cash for this withdrawal', { amount: 'Exceeds available cash' })
     return db.transaction.create({
-      data: { reference, userId: user.id, type: 'WITHDRAWAL', status: 'PENDING', amount: amt, method: 'Sandbox ACH transfer', customerNote: note || null, brokerMode: getBroker().mode },
+      data: {
+        reference,
+        userId: user.id,
+        type: 'WITHDRAWAL',
+        status: 'PENDING',
+        amount: amt,
+        method: paymentsConfig().livemode ? 'Refund to original payment method' : 'Simulated bank transfer',
+        customerNote: note || null,
+        brokerMode: getBroker().mode,
+        livemode: paymentsConfig().livemode,
+      },
     })
   })
   await audit({ actor: user, action: 'withdrawal.requested', targetType: 'transaction', targetId: tx.id, metadata: { amount, reference }, ip })
@@ -130,12 +98,17 @@ export async function reviewWithdrawal(admin: SafeUser, txId: string, decision: 
 
   let brokerRef: string | null = null
   if (decision === 'approve') {
-    const res = await getBroker().executeWithdrawal({
-      accountNumber: existing.user.account?.accountNumber ?? '',
-      amount: Number(existing.amount),
-      reference: existing.reference,
-    })
-    brokerRef = res.brokerRef
+    if (existing.livemode) {
+      // Real money leaves only through the payment provider, back to the original payment method.
+      brokerRef = await refundToSource(existing.userId, Number(existing.amount), existing.reference)
+    } else {
+      const res = await getBroker().executeWithdrawal({
+        accountNumber: existing.user.account?.accountNumber ?? '',
+        amount: Number(existing.amount),
+        reference: existing.reference,
+      })
+      brokerRef = res.brokerRef
+    }
   }
 
   const tx = await prisma.$transaction(async (db) => {
@@ -160,11 +133,11 @@ export async function reviewWithdrawal(admin: SafeUser, txId: string, decision: 
     await db.notification.create({
       data: {
         userId: existing.userId,
-        title: decision === 'approve' ? 'Sandbox withdrawal approved' : 'Sandbox withdrawal rejected',
+        title: decision === 'approve' ? 'Withdrawal approved' : 'Withdrawal rejected',
         body:
           decision === 'approve'
-            ? `Your simulated withdrawal of $${existing.amount.toFixed(2)} (${existing.reference}) was approved.`
-            : `Your simulated withdrawal ${existing.reference} was rejected and $${existing.amount.toFixed(2)} returned to your cash balance.`,
+            ? `Your withdrawal of $${existing.amount.toFixed(2)} (${existing.reference}) was approved${existing.livemode ? ' and returned to your original payment method' : ' (simulated)'}.`
+            : `Your withdrawal ${existing.reference} was rejected and $${existing.amount.toFixed(2)} was returned to your cash balance.`,
         level: decision === 'approve' ? 'success' : 'warning',
       },
     })
@@ -184,8 +157,11 @@ export async function placeOrder(
   ip: string,
 ): Promise<Transaction> {
   const settings = await assertCanTransact(user, { emailVerified: true, kyc: true })
-  const account = await ensureAccount(user.id)
   const broker = getBroker()
+  if (broker.simulated && paymentsConfig().livemode) {
+    throw new ApiError(403, 'Trading is unavailable: real funds cannot buy simulated shares. A licensed brokerage integration is required.')
+  }
+  const account = await ensureAccount(user.id)
   const symbol = 'TSLA'
   const quote = await broker.getQuote(symbol)
   const holding = await prisma.holding.findUnique({ where: { accountId_symbol: { accountId: account.id, symbol } } })

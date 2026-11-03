@@ -4,10 +4,10 @@ import { z } from 'zod'
 import { prisma } from '@/server/db'
 
 export const ACCENTS = {
-  signal: { label: 'Signal Red', hex: '#E82127' },
+  signal: { label: 'Signal Red', hex: '#D9252B' },
   ember: { label: 'Ember Orange', hex: '#F2602E' },
   volt: { label: 'Volt Blue', hex: '#3B82F6' },
-  silver: { label: 'Platinum', hex: '#C9CCD1' },
+  graphite: { label: 'Graphite', hex: '#2F3338' },
 } as const
 export type AccentKey = keyof typeof ACCENTS
 
@@ -67,26 +67,26 @@ export type SettingsKey = keyof typeof settingsSchemas
 export type Settings = { [K in SettingsKey]: z.infer<(typeof settingsSchemas)[K]> }
 
 export const DEFAULT_SETTINGS: Settings = {
-  branding: { platformName: 'Tesla Investment', tagline: 'TSLA education & sandbox brokerage', logoDataUrl: '' },
-  appearance: { accent: 'signal', heroStyle: 'grid' },
+  branding: { platformName: 'Tesla Investment', tagline: 'Research Tesla stock, fund your account and follow your portfolio', logoDataUrl: '' },
+  appearance: { accent: 'signal', heroStyle: 'minimal' },
   homepage: {
-    heroEyebrow: 'Sandbox brokerage · Virtual funds',
+    heroEyebrow: 'Tesla stock, explained and tracked',
     heroHeadline: 'Invest in the Future of Innovation.',
     heroSubtext:
-      'Learn how TSLA trades, build a portfolio with virtual funds, and practise every step — funding, fractional buys, sells and withdrawals — in a risk-free sandbox.',
-    primaryCta: 'Open sandbox account',
-    secondaryCta: 'Explore TSLA',
+      'Understand how TSLA trades, add funds through a regulated payment provider, and practise fractional buying and selling with a simulated portfolio before you commit real capital anywhere.',
+    primaryCta: 'Open an account',
+    secondaryCta: 'View TSLA',
   },
   support: {
     email: 'support@example.com',
     phone: '+1 (555) 010-0199',
     hours: 'Mon–Fri, 9:00–17:00 ET',
-    note: 'This is a sandbox environment. No real money is held, so support cannot recover or transfer funds.',
+    note: 'For account or payment questions, open a support request from your account so we can verify it is you.',
   },
   investmentInfo: {
     title: 'About TSLA',
     body:
-      'Tesla, Inc. (Nasdaq: TSLA) designs and manufactures electric vehicles, battery energy storage and solar products. The stock is known for high volatility relative to the broader market.\n\nThis platform is an independent sandbox. Prices shown are simulated and are not real-time market data. Nothing here is investment advice.',
+      'Tesla, Inc. (Nasdaq: TSLA) designs and manufactures electric vehicles, battery energy storage and solar products. The stock is known for high volatility relative to the broader market.\n\nThis platform is independent of Tesla, Inc. Prices shown are simulated and are not real-time market data. Nothing here is investment advice.',
   },
   maintenance: { enabled: false, message: 'We are performing scheduled maintenance. Trading and funding are temporarily paused.' },
   trading: {

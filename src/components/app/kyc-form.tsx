@@ -29,7 +29,7 @@ export function KycForm({ defaults }: { defaults: { legalName: string } }) {
     e.preventDefault()
     if (!f.values.attest) return f.setErrors({ attest: 'You must confirm this attestation' })
     if (await f.submit('/api/kyc', f.values)) {
-      toast({ tone: 'success', title: 'Verification submitted', body: 'An administrator will review your sandbox submission.' })
+      toast({ tone: 'success', title: 'Verification submitted', body: 'Our team will review it and notify you.' })
       router.refresh()
     }
   }
@@ -72,17 +72,17 @@ export function KycForm({ defaults }: { defaults: { legalName: string } }) {
         <p className="eyebrow mb-4">Identity document type</p>
         <div className="grid gap-2 sm:grid-cols-3">
           {KYC_DOCUMENTS.map((d) => (
-            <label key={d} className={`cursor-pointer rounded-xl border px-4 py-3 text-sm transition-colors ${f.values.documentType === d ? 'border-accent/50 bg-accent/[0.05] text-white' : 'border-white/[0.08] text-mute hover:text-white'}`}>
+            <label key={d} className={`cursor-pointer rounded-md border px-4 py-3 text-sm transition-colors ${f.values.documentType === d ? 'border-accent/50 bg-accent/[0.05] text-fg' : 'border-fg/[0.08] text-muted hover:text-fg'}`}>
               <input type="radio" name="doc" className="sr-only" checked={f.values.documentType === d} onChange={() => f.set('documentType', d)} />
               {d}
             </label>
           ))}
         </div>
         <Alert tone="info" icon={<Lock className="size-4" />} className="mt-4">
-          Sandbox verification never asks for ID numbers, document photos or selfies. Only the document <em>type</em> is recorded so you can rehearse the flow.
+          We record which document you hold but never ask you to upload ID numbers, document photos or selfies through this website.
         </Alert>
       </section>
-      <label className="flex items-start gap-3 text-sm text-mute">
+      <label className="flex items-start gap-3 text-sm text-muted">
         <input type="checkbox" className="mt-0.5 size-4 accent-[var(--color-accent)]" checked={f.values.attest} onChange={(e) => f.set('attest', e.target.checked)} />
         I confirm the information above is accurate and I understand this is a simulated verification that does not create a real brokerage account.
       </label>

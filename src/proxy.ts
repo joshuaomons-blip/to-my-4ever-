@@ -9,7 +9,7 @@ const PUBLIC_ADMIN = ['/admin/login', '/admin/setup', '/admin/mfa', '/admin/forg
 
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl
-  if (pathname.startsWith('/app') && !req.cookies.has('ti_session')) {
+  if (pathname.startsWith('/account') && !req.cookies.has('ti_session')) {
     const url = new URL('/login', req.url)
     url.searchParams.set('next', pathname + search)
     return NextResponse.redirect(url)
@@ -18,11 +18,11 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', req.url))
   }
   const res = NextResponse.next()
-  if (pathname.startsWith('/admin') || pathname.startsWith('/app')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/account')) {
     res.headers.set('Cache-Control', 'no-store')
     res.headers.set('X-Robots-Tag', 'noindex, nofollow')
   }
   return res
 }
 
-export const config = { matcher: ['/app/:path*', '/admin/:path*'] }
+export const config = { matcher: ['/account/:path*', '/admin/:path*'] }

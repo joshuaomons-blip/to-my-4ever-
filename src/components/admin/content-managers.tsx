@@ -3,13 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Eye, EyeOff, Pencil, Plus, Send, Trash2 } from 'lucide-react'
-import { Alert, Badge, Button, EmptyState, Field, Input, Select, Textarea } from '@/components/ui'
+import { Alert, Badge, Button, EmptyState, Field, Input, Select, Textarea, RelTime } from '@/components/ui'
 import { Modal } from '@/components/modal'
 import { useForm } from '@/components/use-form'
 import { useToast } from '@/components/toast'
 import { Toggle } from './settings-form'
 import { api } from '@/lib/api'
-import { relTime } from '@/lib/format'
 
 type Announcement = { id: string; title: string; body: string; level: string; active: boolean; createdAt: string }
 type Faq = { id: string; question: string; answer: string; sortOrder: number; published: boolean }
@@ -39,7 +38,7 @@ export function AnnouncementsManager({ items }: { items: Announcement[] }) {
   return (
     <div className="space-y-6">
       <form
-        className="grid gap-3 rounded-2xl border border-white/[0.08] p-4 sm:grid-cols-[1fr_140px]"
+        className="grid gap-3 rounded-lg border border-fg/[0.08] p-4 sm:grid-cols-[1fr_140px]"
         noValidate
         onSubmit={async (e) => {
           e.preventDefault()
@@ -59,13 +58,13 @@ export function AnnouncementsManager({ items }: { items: Announcement[] }) {
       {items.length === 0 ? (
         <EmptyState title="No announcements" description="Announcements appear on the homepage and customer dashboard while active." />
       ) : (
-        <ul className="divide-y divide-white/[0.05]">
+        <ul className="divide-y divide-fg/[0.05]">
           {items.map((a) => (
             <li key={a.id} className="flex flex-wrap items-start gap-3 py-3.5">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">{a.title} <Badge tone={a.level === 'warning' ? 'warn' : a.level === 'success' ? 'gain' : 'neutral'}>{a.level}</Badge>{a.active ? <Badge tone="gain" dot>Live</Badge> : <Badge dot>Hidden</Badge>}</p>
-                <p className="mt-1 text-xs text-mute">{a.body}</p>
-                <p className="mt-1 text-[10px] text-dim">{relTime(a.createdAt)}</p>
+                <p className="mt-1 text-xs text-muted">{a.body}</p>
+                <p className="mt-1 text-[10px] text-faint"><RelTime date={a.createdAt} /></p>
               </div>
               <div className="flex gap-1.5">
                 <Button size="sm" variant="ghost" loading={busy === a.id + 't'} onClick={() => run(a.id + 't', `/api/admin/announcements/${a.id}`, 'PATCH', { active: !a.active }, a.active ? 'Announcement hidden' : 'Announcement live')}>{a.active ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}{a.active ? 'Hide' : 'Show'}</Button>
@@ -114,13 +113,13 @@ export function FaqManager({ items }: { items: Faq[] }) {
     <div>
       <Button size="sm" onClick={() => setEditing('new')}><Plus className="size-3.5" /> Add question</Button>
       {items.length === 0 ? <EmptyState title="No FAQs yet" /> : (
-        <ul className="mt-4 divide-y divide-white/[0.05]">
+        <ul className="mt-4 divide-y divide-fg/[0.05]">
           {items.map((q) => (
             <li key={q.id} className="flex flex-wrap items-start gap-3 py-3.5">
-              <span className="num mt-0.5 w-8 text-xs text-dim">#{q.sortOrder}</span>
+              <span className="num mt-0.5 w-8 text-xs text-faint">#{q.sortOrder}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{q.question} {!q.published && <Badge className="ml-1">Draft</Badge>}</p>
-                <p className="mt-1 line-clamp-2 text-xs text-mute">{q.answer}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-muted">{q.answer}</p>
               </div>
               <div className="flex gap-1.5">
                 <Button size="sm" variant="ghost" onClick={() => setEditing(q)}><Pencil className="size-3.5" /> Edit</Button>

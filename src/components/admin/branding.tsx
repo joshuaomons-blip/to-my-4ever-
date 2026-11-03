@@ -39,7 +39,7 @@ export function BrandingForm({ initial }: { initial: { platformName: string; tag
       {f.error && <Alert tone="loss">{f.error}</Alert>}
       <Field label="Logo" error={f.errors.logoDataUrl} hint="Square PNG, JPEG or WebP, under 200 KB. Leave empty to use the default mark.">
         <div className="flex items-center gap-4">
-          <div className="grid size-16 place-items-center rounded-2xl border border-white/10 bg-ink">
+          <div className="grid size-16 place-items-center rounded-lg border border-fg/10 bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {f.values.logoDataUrl ? <img src={f.values.logoDataUrl} alt="Logo preview" className="size-12 rounded-lg object-contain" /> : <LogoMark className="size-10" />}
           </div>
@@ -52,7 +52,7 @@ export function BrandingForm({ initial }: { initial: { platformName: string; tag
         <Input id="br-name" maxLength={40} value={f.values.platformName} onChange={(e) => f.set('platformName', e.target.value)} invalid={!!f.errors.platformName} />
       </Field>
       <Field label="Tagline" error={f.errors.tagline} htmlFor="br-tag"><Input id="br-tag" maxLength={80} value={f.values.tagline} onChange={(e) => f.set('tagline', e.target.value)} /></Field>
-      <Alert tone="neutral">The sandbox disclosure and “not affiliated with Tesla, Inc.” notice are fixed and always displayed, whatever the branding.</Alert>
+      <Alert tone="neutral">The test-mode / simulation disclosure and “not affiliated with Tesla, Inc.” notice are fixed and always displayed, whatever the branding.</Alert>
       <Button type="submit" variant="light" loading={f.loading}>Save branding</Button>
     </form>
   )
@@ -75,21 +75,21 @@ export function AppearanceForm({ initial, accents }: { initial: { accent: string
     >
       {f.error && <Alert tone="loss">{f.error}</Alert>}
       <div>
-        <p className="mb-2 text-xs font-medium text-silver">Accent colour</p>
+        <p className="mb-2 text-xs font-medium text-fg-2">Accent colour</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {Object.entries(accents).map(([k, a]) => (
-            <button key={k} type="button" onClick={() => f.set('accent', k)} className={cn('flex items-center gap-2.5 rounded-xl border p-3 text-left text-xs transition-all', f.values.accent === k ? 'border-white/40 bg-white/[0.05]' : 'border-white/[0.08] hover:border-white/20')}>
-              <span className="size-5 rounded-full ring-2 ring-white/10" style={{ background: a.hex }} />
+            <button key={k} type="button" onClick={() => f.set('accent', k)} className={cn('flex items-center gap-2.5 rounded-md border p-3 text-left text-xs transition-all', f.values.accent === k ? 'border-fg/40 bg-fg/[0.05]' : 'border-fg/[0.08] hover:border-fg/20')}>
+              <span className="size-5 rounded-full ring-2 ring-fg/10" style={{ background: a.hex }} />
               {a.label}
             </button>
           ))}
         </div>
       </div>
       <div>
-        <p className="mb-2 text-xs font-medium text-silver">Homepage hero background</p>
+        <p className="mb-2 text-xs font-medium text-fg-2">Homepage hero background</p>
         <div className="grid grid-cols-3 gap-2">
-          {[['grid', 'Grid + glow'], ['aurora', 'Aurora'], ['minimal', 'Minimal']].map(([k, l]) => (
-            <button key={k} type="button" onClick={() => f.set('heroStyle', k)} className={cn('rounded-xl border px-3 py-2.5 text-xs transition-all', f.values.heroStyle === k ? 'border-white/40 bg-white/[0.05] text-white' : 'border-white/[0.08] text-mute hover:text-white')}>{l}</button>
+          {[['minimal', 'Plain white'], ['grid', 'Fine grid'], ['aurora', 'Soft grey']].map(([k, l]) => (
+            <button key={k} type="button" onClick={() => f.set('heroStyle', k)} className={cn('rounded-md border px-3 py-2.5 text-xs transition-all', f.values.heroStyle === k ? 'border-fg/40 bg-fg/[0.05] text-fg' : 'border-fg/[0.08] text-muted hover:text-fg')}>{l}</button>
           ))}
         </div>
       </div>

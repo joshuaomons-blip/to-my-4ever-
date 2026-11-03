@@ -14,9 +14,16 @@
 import { PrismaClient } from '@prisma/client'
 import { randomBytes } from 'node:crypto'
 import { totpCode } from '../src/server/security/totp'
+import { signPayload } from '../src/server/payments/signature'
 
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 const prisma = new PrismaClient()
+const testWebhookSecret = process.env.TEST_PAYMENTS_WEBHOOK_SECRET ?? ''
+
+async function anonPost(path: string, raw: string, headers: Record<string, string>) {
+  const res = await fetch(BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: raw })
+  return { status: res.status, data: await res.json().catch(() => ({})), headers: res.headers }
+}
 
 let passed = 0
 let failed = 0
@@ -86,7 +93,7 @@ async function main() {
   check('sets session cookie', cust.cookies.has('ti_session'))
   r = await cust.get('/api/portfolio')
   check('new account has $0 cash', r.status === 200 && r.data.portfolio.cash === 0, r.data)
-  r = await cust.post('/api/funding/deposit', { amount: 100, method: 'Sandbox ACH transfer' })
+  r = await cust.post('/api/payments/deposits', { amount: 100, method: 'BANK_TRANSFER', idempotencyKey: 'pre-verify-' + tag })
   check('deposit blocked until email verified (403)', r.status === 403, r.status)
   const verifyToken = await latestEmailLink(email, '/verify-email')
   check('verification email written to sandbox outbox', !!verifyToken)
@@ -104,7 +111,7 @@ async function main() {
   check('wrong password rejected (401)', r.status === 401, r.status)
   r = await cust.post('/api/auth/login', { email, password })
   check('correct password signs in', r.status === 200 && r.data.mfa === false, r.data)
-  r = await cust.get('/app')
+  r = await cust.get('/account')
   check('customer dashboard renders (200)', r.status === 200, r.status)
 
   // ── 3. Administrator login ────────────────────────────────────
@@ -144,23 +151,75 @@ async function main() {
   r = await admin.get('/api/portfolio')
   check('admin session cannot use customer API (401)', r.status === 401, r.status)
 
-  // ── 5. Simulated deposits ─────────────────────────────────────
-  section('5. Simulated deposits')
-  r = await cust.post('/api/funding/deposit', { amount: 5, method: 'Sandbox ACH transfer' })
+  // ── 5. Deposits through the payment-provider pipeline ─────────
+  section('5. Deposits (payment provider, signed webhooks, verification)')
+  const key = () => randomBytes(12).toString('hex')
+  const cashNow = async () => (await cust.get('/api/portfolio')).data.portfolio.cash as number
+  r = await cust.post('/api/payments/deposits', { amount: 5, method: 'BANK_TRANSFER', idempotencyKey: key() })
   check('below minimum rejected (422)', r.status === 422, r.status)
-  r = await cust.post('/api/funding/deposit', { amount: 100, method: 'Real Bank 1234' })
-  check('non-sandbox method rejected (422)', r.status === 422, r.status)
-  r = await cust.post('/api/funding/deposit', { amount: 5000, method: 'Sandbox ACH transfer' })
-  check('deposit created as PENDING', r.status === 200 && r.data.transaction.status === 'PENDING', r.data)
-  const depRef = r.data.transaction?.reference
-  let cash = 0
-  for (let i = 0; i < 20; i++) {
-    const p = await cust.get('/api/portfolio')
-    cash = p.data.portfolio.cash
-    if (cash === 5000) break
-    await sleep(1000)
+  r = await cust.post('/api/payments/deposits', { amount: 100, method: 'PAYPAL', idempotencyKey: key() })
+  check('unsupported payment method rejected (422)', r.status === 422, r.status)
+  const k1 = key()
+  r = await cust.post('/api/payments/deposits', { amount: 5000, method: 'BANK_TRANSFER', idempotencyKey: k1 })
+  check('bank-transfer deposit created, awaiting payment, with reference and instructions', r.status === 200 && r.data.deposit.status === 'AWAITING_PAYMENT' && r.data.deposit.instructions?.['Payment reference'] === r.data.deposit.reference, r.data)
+  const dep = r.data.deposit
+  const depRef = dep.reference
+  r = await cust.post('/api/payments/deposits', { amount: 5000, method: 'BANK_TRANSFER', idempotencyKey: k1 })
+  check('same idempotency key returns the same deposit (no duplicate)', r.data.deposit?.id === dep.id, r.data)
+  check('nothing credited before payment', (await cashNow()) === 0)
+
+  const session = (await prisma.depositRequest.findUniqueOrThrow({ where: { id: dep.id } })).providerSessionId!
+  const forged = JSON.stringify({ id: 'evt_forged_' + tag, type: 'payment.succeeded', data: { session_id: session } })
+  r = await anonPost('/api/webhooks/payments/test', forged, { 'test-signature': signPayload('wrong-secret', forged) })
+  check('webhook with a bad signature is rejected (400)', r.status === 400, r.status)
+  const spoofBody = JSON.stringify({ id: 'evt_spoof_' + tag, type: 'payment.succeeded', data: { session_id: session } })
+  r = await anonPost('/api/webhooks/payments/test', spoofBody, { 'test-signature': signPayload(testWebhookSecret, spoofBody) })
+  const spoofEvent = await prisma.paymentEvent.findFirst({ where: { eventId: 'evt_spoof_' + tag } })
+  check('validly signed event for an unpaid session is rejected after re-checking with provider', r.status === 200 && spoofEvent?.outcome === 'rejected', spoofEvent)
+  check('still nothing credited', (await cashNow()) === 0)
+
+  r = await cust.post(`/api/payments/test/${dep.id}`, { outcome: 'succeeded' })
+  check('provider receives transfer → deposit SUCCEEDED', r.status === 200 && r.data.status === 'SUCCEEDED', r.data)
+  check('cash credited $5,000 only after verification', (await cashNow()) === 5000)
+  const okEvent = await prisma.paymentEvent.findFirst({ where: { depositId: dep.id, outcome: 'processed' } })
+  check('webhook recorded as signature-valid and provider-verified', okEvent?.signatureValid === true && okEvent.verified === true, okEvent)
+
+  const replay = JSON.stringify({ id: 'evt_replay_' + tag, type: 'payment.succeeded', data: { session_id: session } })
+  const replayHeaders = { 'test-signature': signPayload(testWebhookSecret, replay) }
+  r = await anonPost('/api/webhooks/payments/test', replay, replayHeaders)
+  check('second success event for the same payment does not credit again', r.data.outcome === 'duplicate' && (await cashNow()) === 5000, r.data)
+  r = await anonPost('/api/webhooks/payments/test', replay, replayHeaders)
+  check('exact duplicate event delivery is ignored', r.data.duplicate === true && (await cashNow()) === 5000, r.data)
+
+  r = await cust.post('/api/payments/deposits', { amount: 250, method: 'CARD', idempotencyKey: key() })
+  const card = r.data.deposit
+  check('card deposit returns a checkout URL', !!card?.checkoutUrl, r.data)
+  r = await cust.post(`/api/payments/test/${card.id}`, { outcome: 'declined' })
+  check('declined card → deposit FAILED, nothing credited', r.data.status === 'FAILED' && (await cashNow()) === 5000, r.data)
+  r = await cust.get(`/api/payments/deposits/${card.id}`)
+  check('failure reason shown to customer', /declined/i.test(r.data.deposit?.failureReason ?? ''), r.data)
+  r = await cust.post(`/api/payments/test/${card.id}`, { outcome: 'succeeded' })
+  check('failed deposit cannot be paid afterwards (409)', r.status === 409, r.status)
+
+  r = await cust.post('/api/payments/deposits', { amount: 300, method: 'BANK_TRANSFER', idempotencyKey: key() })
+  const toCancel = r.data.deposit
+  r = await cust.post(`/api/payments/deposits/${toCancel.id}/cancel`)
+  check('customer cancels an unpaid deposit', r.status === 200, r.status)
+  r = await cust.post(`/api/payments/deposits/${toCancel.id}/cancel`)
+  check('cancelling twice is refused (409)', r.status === 409, r.status)
+  const someoneElse = await prisma.depositRequest.findFirst({ where: { userId: { not: (await prisma.user.findUniqueOrThrow({ where: { email } })).id } } })
+  if (someoneElse) {
+    r = await cust.get(`/api/payments/deposits/${someoneElse.id}`)
+    check("customer cannot read another customer's deposit (404)", r.status === 404, r.status)
   }
-  check('deposit settles to COMPLETED and credits $5,000', cash === 5000, cash)
+
+  r = await cust.post('/api/payments/deposits', { amount: 1000, method: 'BANK_TRANSFER', idempotencyKey: key() })
+  const partial = r.data.deposit
+  r = await admin.post('/api/admin/payments/simulate', { reference: partial.reference, amount: 900 })
+  check('admin test simulator: transfer of a different amount credits the amount actually received', r.status === 200 && r.data.status === 'SUCCEEDED' && (await cashNow()) === 5900, { r: r.data, cash: await cashNow() })
+  r = await admin.post(`/api/admin/deposits/${partial.id}/reverify`)
+  check('admin re-check with provider is idempotent', r.status === 200 && r.data.outcome === 'duplicate' && (await cashNow()) === 5900, r.data)
+  const cash = await cashNow()
 
   // ── 4. Account management (KYC) ───────────────────────────────
   section('4. Account management — KYC & customer controls')
@@ -179,7 +238,7 @@ async function main() {
   r = await admin.get(`/api/admin/customers?q=${encodeURIComponent(email)}`)
   check('admin customer search finds the customer', r.status === 200 && r.data.rows.length === 1 && r.data.rows[0].kyc === 'APPROVED', r.data)
   r = await admin.get(`/api/admin/customers/${user.id}`)
-  check('admin views individual portfolio and cash', r.status === 200 && r.data.portfolio.cash === 5000, r.data.portfolio)
+  check('admin views individual portfolio and cash', r.status === 200 && r.data.portfolio.cash === cash, r.data.portfolio)
   r = await admin.post(`/api/admin/customers/${user.id}/flag`, { flagged: true, reason: 'E2E suspicious pattern' })
   check('admin flags suspicious activity', r.status === 200, r.data)
   r = await admin.post(`/api/admin/customers/${user.id}/notes`, { body: 'E2E internal note' })
@@ -204,7 +263,7 @@ async function main() {
   check('fractional quantity = amount / price', Math.abs(buy.shares - Math.floor((1000 / buy.price) * 1e6) / 1e6) < 1e-6, buy)
   r = await cust.get('/api/portfolio')
   const afterBuy = r.data.portfolio
-  check('cash debited by amount + fee', Math.abs(afterBuy.cash - (5000 - buy.amount - buy.fee)) < 0.011, { cash: afterBuy.cash, buy })
+  check('cash debited by amount + fee', Math.abs(afterBuy.cash - (cash - buy.amount - buy.fee)) < 0.011, { cash: afterBuy.cash, buy })
   check('holding updated', Math.abs(afterBuy.shares - buy.shares) < 1e-6, afterBuy.shares)
   r = await cust.post('/api/trade', { side: 'buy', mode: 'amount', value: 999999 })
   check('buy exceeding cash rejected (422)', r.status === 422, r.status)
@@ -267,7 +326,7 @@ async function main() {
   check('type filter works', r.data.rows.length === 2 && r.data.rows.every((t: { type: string }) => t.type === 'BUY'), r.data.rows.length)
   r = await cust.get(`/api/transactions?q=${wdApprove.reference}`)
   check('reference search works', r.data.rows.length === 1, r.data.rows.length)
-  r = await cust.get(`/app/transactions/${buy.id}`)
+  r = await cust.get(`/account/transactions/${buy.id}`)
   check('receipt page renders', r.status === 200, r.status)
   r = await cust.get('/api/statements?kind=summary')
   check('summary statement is a PDF', r.status === 200 && r.headers.get('content-type') === 'application/pdf' && (r.data as Buffer).subarray(0, 4).toString() === '%PDF', r.status)
@@ -275,10 +334,37 @@ async function main() {
   check('transaction report is a PDF', r.status === 200 && (r.data as Buffer).subarray(0, 4).toString() === '%PDF', r.status)
   const other = await prisma.transaction.findFirst({ where: { userId: { not: user.id } } })
   if (other) {
-    r = await cust.get(`/app/transactions/${other.id}`)
+    r = await cust.get(`/account/transactions/${other.id}`)
     // Streaming responses may already have sent 200 before notFound(); assert no data leaks.
     check("customer cannot view another customer's receipt", (r.status === 404 || r.status === 200) && !String(r.data).includes(other.reference) && /not found/i.test(String(r.data)), r.status)
   }
+
+  // ── Ledger corrections ──────────────────────────────────────
+  section('Balance corrections (demo mode)')
+  const before = await cashNow()
+  r = await admin.post('/api/admin/adjustments', { customer: email, amount: 125.5, reason: 'short' })
+  check('correction without a proper reason is rejected (422)', r.status === 422, r.status)
+  r = await admin.post('/api/admin/adjustments', { customer: email, amount: 125.5, reason: 'Goodwill credit for delayed statement (E2E)' })
+  check('demo correction applied immediately', r.status === 200 && r.data.status === 'APPLIED', r.data)
+  check('cash increased by the correction', Math.abs((await cashNow()) - (before + 125.5)) < 0.011)
+  r = await admin.post('/api/admin/adjustments', { customer: email, amount: -1_000_000, reason: 'Debit larger than balance (E2E)' })
+  check('debit larger than the balance is refused (422)', r.status === 422, r.status)
+  const adjTx = await prisma.transaction.findFirst({ where: { type: 'ADJUSTMENT', user: { email } } })
+  check('correction recorded as a ledger entry', adjTx?.status === 'COMPLETED' && Number(adjTx.amount) === 125.5, adjTx)
+
+  // ── Support requests ────────────────────────────────────────
+  section('Customer support')
+  r = await cust.post('/api/support/tickets', { subject: 'Hi', category: 'Funding', message: 'short' })
+  check('support form validation (422)', r.status === 422, r.status)
+  r = await cust.post('/api/support/tickets', { subject: 'Deposit question (E2E)', category: 'Funding', message: 'My bank transfer arrived with a different amount. Can you confirm?' })
+  check('customer opens a support request', r.status === 200 && !!r.data.reference, r.data)
+  const ticketId = r.data.id
+  r = await admin.post(`/api/admin/support/${ticketId}/reply`, { body: 'We received $900 and credited that amount. (E2E)' })
+  check('admin replies', r.status === 200, r.status)
+  const ticket = await prisma.supportTicket.findUnique({ where: { id: ticketId } })
+  check('request marked answered', ticket?.status === 'ANSWERED', ticket?.status)
+  r = await cust.post(`/api/support/tickets/${ticketId}/status`, { status: 'CLOSED' })
+  check('customer closes the request', r.status === 200, r.status)
 
   // ── 10b. Administrator permissions (RBAC) ─────────────────────
   section('10b. Administrator permissions')
@@ -304,6 +390,10 @@ async function main() {
   check('support cannot suspend customers (403)', r.status === 403, r.status)
   r = await support.get('/api/admin/transactions/export')
   check('support cannot export transactions (403)', r.status === 403, r.status)
+  r = await support.post(`/api/admin/deposits/${dep.id}/reverify`)
+  check('support cannot re-check deposits (403)', r.status === 403, r.status)
+  r = await support.post('/api/admin/adjustments', { customer: email, amount: 10, reason: 'Support should not do this (E2E)' })
+  check('support cannot correct balances (403)', r.status === 403, r.status)
   r = await support.get('/admin/settings')
   check('support visiting settings page is redirected', r.status === 307 || r.status === 200 && String(r.data).includes('denied'), r.status)
 

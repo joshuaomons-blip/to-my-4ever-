@@ -53,7 +53,7 @@ export function LiveQuote({ initial, size = 'lg', className }: { initial: QuoteD
   return (
     <div className={className}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className={cn('num font-medium text-white transition-colors duration-700', size === 'lg' ? 'text-4xl sm:text-5xl' : 'text-2xl', flash === 'up' && 'text-gain', flash === 'down' && 'text-loss')}>
+        <span className={cn('num font-semibold text-fg transition-colors duration-700', size === 'lg' ? 'display text-4xl sm:text-[44px]' : 'text-[26px]', flash === 'up' && 'text-gain', flash === 'down' && 'text-loss')}>
           {usdFmt(quote.price)}
         </span>
         <span className={cn('num inline-flex items-center gap-1 text-sm', up ? 'text-gain' : 'text-loss')}>
@@ -62,8 +62,8 @@ export function LiveQuote({ initial, size = 'lg', className }: { initial: QuoteD
           {usdFmt(Math.abs(quote.change))} ({pct(quote.changePercent)})
         </span>
       </div>
-      <p className="mt-1.5 text-[11px] text-dim">
-        Sandbox price · updated {timeFmt(quote.asOf)} · not real market data
+      <p className="mt-1.5 text-[12.5px] text-muted">
+        Simulated price, updated {timeFmt(quote.asOf)}. Not real market data.
       </p>
     </div>
   )

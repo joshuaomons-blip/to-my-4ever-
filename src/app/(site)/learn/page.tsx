@@ -21,7 +21,7 @@ const SECTIONS = [
     body: [
       'Investors place orders through a licensed broker. A market order executes at the best available price; a limit order only executes at your price or better.',
       'Fractional shares let you invest a dollar amount rather than a whole share. Prices move with supply and demand, driven by earnings, guidance, news and the wider economy.',
-      'In this sandbox, orders are filled instantly by a simulated broker at a simulated price, so you can learn the mechanics without any money at stake.',
+      'On this platform, orders are filled instantly by a simulated broker at a simulated price, so you can learn the mechanics without buying real shares.',
     ],
   },
   {
@@ -57,16 +57,16 @@ export default async function LearnPage() {
   const { investmentInfo } = await getSettings()
   return (
     <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-      <div className="max-w-3xl animate-fade-up">
+      <div className="max-w-3xl">
         <p className="eyebrow">Education</p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Learn before you invest.</h1>
-        <p className="mt-5 text-lg text-mute">Concise, practical lessons, then put them to work in the sandbox with virtual funds.</p>
+        <p className="mt-5 text-lg text-muted">Concise, practical lessons, then put them to work in your simulated portfolio.</p>
       </div>
       <div className="mt-14 grid gap-10 lg:grid-cols-[220px_1fr]">
         <nav className="hidden lg:block">
-          <ul className="sticky top-28 space-y-1 border-l border-white/[0.06]">
+          <ul className="sticky top-28 space-y-1 border-l border-fg/[0.06]">
             {SECTIONS.map((s) => (
-              <li key={s.id}><a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-1.5 pl-4 text-sm text-mute hover:border-accent hover:text-white">{s.title}</a></li>
+              <li key={s.id}><a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-1.5 pl-4 text-sm text-muted hover:border-accent hover:text-fg">{s.title}</a></li>
             ))}
           </ul>
         </nav>
@@ -75,13 +75,13 @@ export default async function LearnPage() {
             <Card key={s.id} id={s.id} className="scroll-mt-28 p-7 sm:p-9">
               <p className="num text-xs text-accent">{s.kicker}</p>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">{s.title}</h2>
-              <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-mute">{s.body.map((p, i) => <p key={i}>{p}</p>)}</div>
+              <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-muted">{s.body.map((p, i) => <p key={i}>{p}</p>)}</div>
             </Card>
           ))}
           <Card className="p-7 sm:p-9">
             <p className="eyebrow">{investmentInfo.title}</p>
-            <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-mute">{investmentInfo.body.split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}</div>
-            <ButtonLink href="/register" className="mt-6">Practise in the sandbox</ButtonLink>
+            <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-muted">{investmentInfo.body.split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}</div>
+            <ButtonLink href="/register" className="mt-6">Open an account</ButtonLink>
           </Card>
         </div>
       </div>

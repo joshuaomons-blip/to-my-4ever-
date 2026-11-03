@@ -8,6 +8,9 @@ import { getCustomerDetail } from '@/server/services/admin'
 import { getPortfolio } from '@/server/services/portfolio'
 import { Alert, Badge, Card, CardHeader, EmptyState, SimBadge, Stat, StatusBadge } from '@/components/ui'
 import { CustomerActions } from '@/components/admin/actions'
+import { AdjustmentForm } from '@/components/admin/money-tools'
+import { prisma } from '@/server/db'
+import { paymentsConfig } from '@/server/payments/config'
 import { TxTable } from '@/components/app/tx-table'
 import { cn, dateFmt, dateTimeFmt, pct, relTime, sharesFmt, signedUsd, usdFmt } from '@/lib/format'
 
@@ -20,22 +23,24 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   if (!detail) notFound()
   const { user, transactions, activity } = detail
   const p = await getPortfolio(id)
+  const deposits = await prisma.depositRequest.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 20 })
+  const live = paymentsConfig().livemode
   const kyc = user.kyc
   const buys = transactions.filter((t) => t.type === 'BUY' || t.type === 'SELL')
 
   return (
     <>
-      <Link href="/admin/customers" className="mb-6 inline-flex items-center gap-1.5 text-sm text-mute hover:text-white"><ArrowLeft className="size-4" /> Customers</Link>
+      <Link href="/admin/customers" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"><ArrowLeft className="size-4" /> Customers</Link>
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex items-center gap-4">
-          <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-silver/25 to-white/5 font-display text-lg font-semibold">{user.firstName[0]}{user.lastName[0]}</span>
+          <span className="grid size-14 place-items-center rounded-lg bg-gradient-to-br from-fg-2/25 to-fg/5 font-display text-lg font-semibold">{user.firstName[0]}{user.lastName[0]}</span>
           <div>
             <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-semibold tracking-tight">
               {user.firstName} {user.lastName} <StatusBadge status={user.status} />
               {user.flagged && <Badge tone="warn"><Flag className="size-3" /> Flagged</Badge>}
               {user.isSeed && <Badge>Demo customer</Badge>}
             </h1>
-            <p className="mt-1 text-sm text-mute">{user.email} · {user.account?.accountNumber} · joined {dateFmt(user.createdAt)}</p>
+            <p className="mt-1 text-sm text-muted">{user.email} · {user.account?.accountNumber} · joined {dateFmt(user.createdAt)}</p>
           </div>
         </div>
         {can(admin, 'customers:manage') && <CustomerActions id={user.id} status={user.status} flagged={user.flagged} />}
@@ -55,7 +60,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card>
           <CardHeader title="Profile" />
-          <dl className="divide-y divide-white/[0.05] px-6 pt-3 pb-5 text-sm">
+          <dl className="divide-y divide-fg/[0.05] px-6 pt-3 pb-5 text-sm">
             {[
               ['Customer ID', user.id],
               ['Email verified', user.emailVerifiedAt ? dateTimeFmt(user.emailVerifiedAt) : 'No'],
@@ -65,14 +70,14 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
               ['Active sessions', String(user.sessions.length)],
               ['Created', dateTimeFmt(user.createdAt)],
             ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="text-mute">{k}</dt><dd className="num truncate text-right text-xs">{v}</dd></div>
+              <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="text-muted">{k}</dt><dd className="num truncate text-right text-xs">{v}</dd></div>
             ))}
           </dl>
         </Card>
         <Card>
           <CardHeader title="Verification (KYC)" action={<StatusBadge status={kyc?.status ?? 'NOT_STARTED'} />} />
           {kyc && kyc.status !== 'NOT_STARTED' ? (
-            <dl className="divide-y divide-white/[0.05] px-6 pt-3 pb-5 text-sm">
+            <dl className="divide-y divide-fg/[0.05] px-6 pt-3 pb-5 text-sm">
               {[
                 ['Legal name', kyc.legalName],
                 ['Date of birth', kyc.dateOfBirth ? dateFmt(kyc.dateOfBirth) : '—'],
@@ -84,13 +89,13 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                 ['Reviewed', kyc.reviewedAt ? `${dateTimeFmt(kyc.reviewedAt)}${kyc.reviewer ? ` by ${kyc.reviewer.email}` : ''}` : '—'],
                 ...(kyc.decisionReason ? [['Decision reason', kyc.decisionReason]] : []),
               ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="shrink-0 text-mute">{k}</dt><dd className="text-right text-xs">{v ?? '—'}</dd></div>
+                <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="shrink-0 text-muted">{k}</dt><dd className="text-right text-xs">{v ?? '—'}</dd></div>
               ))}
             </dl>
           ) : (
-            <p className="px-6 py-8 text-sm text-mute">The customer has not submitted verification yet.</p>
+            <p className="px-6 py-8 text-sm text-muted">The customer has not submitted verification yet.</p>
           )}
-          {kyc?.status === 'PENDING' && can(admin, 'kyc:review') && <div className="px-6 pb-6"><Link href="/admin/kyc" className="text-sm text-white underline">Review in KYC queue →</Link></div>}
+          {kyc?.status === 'PENDING' && can(admin, 'kyc:review') && <div className="px-6 pb-6"><Link href="/admin/kyc" className="text-sm text-fg underline">Review in KYC queue →</Link></div>}
         </Card>
         <Card>
           <CardHeader title="Internal notes" subtitle="Visible to administrators only" />
@@ -99,14 +104,42 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           ) : (
             <ul className="max-h-96 space-y-3 overflow-y-auto px-6 pt-4 pb-6">
               {user.notesAbout.map((n) => (
-                <li key={n.id} className="rounded-xl border border-white/[0.06] p-3">
-                  <p className="text-sm leading-relaxed text-silver">{n.body}</p>
-                  <p className="mt-1.5 text-[11px] text-dim">{n.author?.email ?? 'system'} · {n.context} · {relTime(n.createdAt)}</p>
+                <li key={n.id} className="rounded-md border border-fg/[0.06] p-3">
+                  <p className="text-sm leading-relaxed text-fg-2">{n.body}</p>
+                  <p className="mt-1.5 text-[11px] text-faint">{n.author?.email ?? 'system'} · {n.context} · {relTime(n.createdAt)}</p>
                 </li>
               ))}
             </ul>
           )}
         </Card>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_400px]">
+        <Card>
+          <CardHeader title="Deposits" subtitle="Payment-provider deposits for this customer" />
+          {deposits.length === 0 ? (
+            <EmptyState title="No deposits" />
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {deposits.map((d) => (
+                <li key={d.id}>
+                  <Link href={`/admin/deposits/${d.id}`} className="flex flex-wrap items-center gap-x-5 gap-y-1 px-6 py-3 text-sm hover:bg-surface-2">
+                    <span className="font-mono text-[13px]">{d.reference}</span>
+                    <span className="num">{usdFmt(Number(d.amount))}</span>
+                    <span className="text-[13px] text-muted">{d.method === 'CARD' ? 'Card' : 'Bank transfer'} · {dateTimeFmt(d.createdAt)}</span>
+                    <span className="ml-auto"><StatusBadge status={d.status} /></span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        {can(admin, 'ledger:adjust') && (
+          <Card>
+            <CardHeader title={live ? 'Request a balance correction' : 'Adjust simulated balance'} subtitle="Recorded as a ledger entry with your reason" />
+            <div className="p-6"><AdjustmentForm live={live} presetCustomer={user.email} /></div>
+          </Card>
+        )}
       </div>
 
       <Card className="mt-6">
@@ -121,11 +154,11 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         {activity.length === 0 ? (
           <EmptyState title="No recorded activity" />
         ) : (
-          <ul className="mt-3 divide-y divide-white/[0.04] px-6 pb-4">
+          <ul className="mt-3 divide-y divide-fg/[0.04] px-6 pb-4">
             {activity.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                <span className={cn('num text-xs', a.action.includes('failed') ? 'text-loss' : 'text-white')}>{a.action}</span>
-                <span className="text-[11px] text-dim">{a.actorEmail ?? 'system'} · {a.ip ?? '—'} · {dateTimeFmt(a.createdAt)}</span>
+                <span className={cn('num text-xs', a.action.includes('failed') ? 'text-loss' : 'text-fg')}>{a.action}</span>
+                <span className="text-[11px] text-faint">{a.actorEmail ?? 'system'} · {a.ip ?? '—'} · {dateTimeFmt(a.createdAt)}</span>
               </li>
             ))}
           </ul>

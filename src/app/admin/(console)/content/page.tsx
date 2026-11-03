@@ -22,13 +22,13 @@ export default async function ContentPage() {
   ])
   return (
     <>
-      <PageHeader eyebrow="Website management" title="Website content" description="Edit public pages, communicate with customers and control maintenance mode. Changes go live immediately." />
+      <PageHeader title="Website content" description="Edit public pages, communicate with customers and control maintenance mode. Changes go live immediately." />
       <nav className="scrollbar-none -mx-4 mb-6 flex gap-2 overflow-x-auto px-4">
-        {SECTIONS.map(([id, l]) => <a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-white/10 px-3.5 py-1.5 text-xs text-mute hover:text-white">{l}</a>)}
+        {SECTIONS.map(([id, l]) => <a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-fg/10 px-3.5 py-1.5 text-xs text-muted hover:text-fg">{l}</a>)}
       </nav>
       <div className="grid gap-6 xl:grid-cols-2">
         <Card id="homepage" className="scroll-mt-20">
-          <CardHeader title="Homepage" subtitle="Hero copy and calls to action" action={<Link href="/" target="_blank" className="text-xs text-mute hover:text-white">View site ↗</Link>} />
+          <CardHeader title="Homepage" subtitle="Hero copy and calls to action" action={<Link href="/" target="_blank" className="text-xs text-muted hover:text-fg">View site ↗</Link>} />
           <div className="p-6">
             <SettingsForm settingKey="homepage" initial={s.homepage} fields={[
               { name: 'heroEyebrow', label: 'Eyebrow label', type: 'text', maxLength: 60 },

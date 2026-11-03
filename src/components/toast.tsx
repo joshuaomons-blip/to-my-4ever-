@@ -19,13 +19,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className="pointer-events-auto flex w-full max-w-sm animate-fade-up gap-3 rounded-2xl border border-white/10 bg-carbon-2/95 p-4 shadow-2xl backdrop-blur-xl">
-            {t.tone === 'success' ? <CircleCheck className="size-5 shrink-0 text-gain" /> : t.tone === 'error' ? <CircleAlert className="size-5 shrink-0 text-loss" /> : <Info className="size-5 shrink-0 text-silver" />}
+          <div key={t.id} className="pointer-events-auto flex w-full max-w-sm animate-pop gap-3 rounded-lg border border-fg/10 bg-surface-2/95 p-4 shadow-2xl backdrop-blur-xl">
+            {t.tone === 'success' ? <CircleCheck className="size-5 shrink-0 text-gain" /> : t.tone === 'error' ? <CircleAlert className="size-5 shrink-0 text-loss" /> : <Info className="size-5 shrink-0 text-fg-2" />}
             <div className="min-w-0 flex-1">
-              <p className={cn('text-sm font-medium', t.tone === 'error' ? 'text-loss' : 'text-white')}>{t.title}</p>
-              {t.body && <p className="mt-0.5 text-xs leading-relaxed text-mute">{t.body}</p>}
+              <p className={cn('text-sm font-medium', t.tone === 'error' ? 'text-loss' : 'text-fg')}>{t.title}</p>
+              {t.body && <p className="mt-0.5 text-xs leading-relaxed text-muted">{t.body}</p>}
             </div>
-            <button onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))} className="text-dim hover:text-white" aria-label="Dismiss">
+            <button onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))} className="text-faint hover:text-fg" aria-label="Dismiss">
               <X className="size-4" />
             </button>
           </div>

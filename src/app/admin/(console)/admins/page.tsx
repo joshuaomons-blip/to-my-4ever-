@@ -12,7 +12,7 @@ export default async function AdminsPage() {
   const admins = await prisma.user.findMany({ where: { role: { in: ['SUPPORT', 'ADMIN', 'SUPER_ADMIN'] } }, orderBy: { createdAt: 'asc' } })
   return (
     <>
-      <PageHeader eyebrow="Access control" title="Administrators" description="Create administrator accounts and assign role-based permissions. Only super administrators can manage administrators." />
+      <PageHeader title="Administrators" description="Create administrator accounts and assign role-based permissions. Only super administrators can manage administrators." />
       <Card>
         <AdminsManager
           selfId={me.id}

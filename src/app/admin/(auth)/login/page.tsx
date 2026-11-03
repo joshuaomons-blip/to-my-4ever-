@@ -16,7 +16,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
   const needsSetup = (await prisma.user.count({ where: { role: 'SUPER_ADMIN' } })) === 0
   return (
     <>
-      <AuthTitle icon={<ShieldHalf className="mb-6 size-10 text-silver" />} title="Administrator sign in" subtitle="Authorised personnel only. Customer accounts cannot sign in here." />
+      <AuthTitle icon={<ShieldHalf className="mb-6 size-10 text-fg-2" />} title="Administrator sign in" subtitle="Authorised personnel only. Customer accounts cannot sign in here." />
       {needsSetup && (
         <Alert tone="warn" className="mb-4" title="No administrator yet">
           Complete the one-time <Link href="/admin/setup" className="underline">secure setup</Link> using the server’s ADMIN_SETUP_TOKEN.

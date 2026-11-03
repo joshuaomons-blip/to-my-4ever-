@@ -7,10 +7,10 @@ export type FilterDef = { name: string; label: string; options: [string, string]
 /** Plain GET form so filters are shareable URLs and work without JavaScript. */
 export function FilterBar({ action, q, qPlaceholder, filters, values, extra }: { action: string; q?: string; qPlaceholder?: string; filters: FilterDef[]; values: Record<string, string | undefined>; extra?: React.ReactNode }) {
   return (
-    <form action={action} className="flex flex-col gap-2 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
+    <form action={action} className="flex flex-col gap-2 border-b border-fg/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
       {qPlaceholder !== undefined && (
         <div className="relative sm:min-w-64 sm:flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-dim" />
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-faint" />
           <input name="q" defaultValue={q} placeholder={qPlaceholder} className={cn(inputClass, 'h-10 py-0 pl-10')} />
         </div>
       )}

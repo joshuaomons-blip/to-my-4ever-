@@ -3,13 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Laptop, ShieldCheck, ShieldOff, Smartphone } from 'lucide-react'
-import { Alert, Badge, Button, Field, Input } from '@/components/ui'
+import { Alert, Badge, Button, Field, Input, RelTime } from '@/components/ui'
 import { Modal } from '@/components/modal'
 import { useForm } from '@/components/use-form'
 import { useToast } from '@/components/toast'
 import { PasswordMeter } from '@/components/auth/forms'
 import { api } from '@/lib/api'
-import { relTime } from '@/lib/format'
 
 export function ChangePasswordForm({ endpoint }: { endpoint: string }) {
   const toast = useToast()
@@ -59,10 +58,10 @@ export function MfaCard({ apiBase, enabled, required }: { apiBase: string; enabl
     <div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex gap-4">
-          <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${enabled ? 'bg-gain/10 text-gain' : 'bg-white/[0.04] text-mute'}`}>{enabled ? <ShieldCheck className="size-5" /> : <ShieldOff className="size-5" />}</span>
+          <span className={`grid size-11 shrink-0 place-items-center rounded-lg ${enabled ? 'bg-gain/10 text-gain' : 'bg-fg/[0.04] text-muted'}`}>{enabled ? <ShieldCheck className="size-5" /> : <ShieldOff className="size-5" />}</span>
           <div>
             <div className="flex items-center gap-2"><p className="font-medium">Authenticator app (TOTP)</p>{enabled ? <Badge tone="gain" dot>Enabled</Badge> : <Badge tone={required ? 'warn' : 'neutral'} dot>{required ? 'Required' : 'Off'}</Badge>}</div>
-            <p className="mt-1 max-w-md text-sm text-mute">Require a 6-digit code from Google Authenticator, 1Password, Authy or similar at every sign-in.</p>
+            <p className="mt-1 max-w-md text-sm text-muted">Require a 6-digit code from Google Authenticator, 1Password, Authy or similar at every sign-in.</p>
           </div>
         </div>
         {enabled ? <Button variant="ghost" onClick={() => setDisableOpen(true)}>Disable</Button> : !setup && <Button onClick={start} loading={starting}>Set up</Button>}
@@ -70,9 +69,9 @@ export function MfaCard({ apiBase, enabled, required }: { apiBase: string; enabl
       {startError && <Alert tone="loss" className="mt-4">{startError}</Alert>}
 
       {setup && !enabled && (
-        <div className="mt-6 grid gap-6 rounded-2xl border border-white/[0.08] bg-ink/50 p-5 sm:grid-cols-[180px_1fr]">
+        <div className="mt-6 grid gap-6 rounded-lg border border-fg/[0.08] bg-canvas/50 p-5 sm:grid-cols-[180px_1fr]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={setup.qr} alt="Scan this QR code with your authenticator app" className="size-44 rounded-xl bg-white p-2" />
+          <img src={setup.qr} alt="Scan this QR code with your authenticator app" className="size-44 rounded-md bg-fg p-2" />
           <form
             className="space-y-4"
             onSubmit={async (e) => {
@@ -84,9 +83,9 @@ export function MfaCard({ apiBase, enabled, required }: { apiBase: string; enabl
               }
             }}
           >
-            <ol className="list-decimal space-y-1 pl-4 text-sm text-mute">
+            <ol className="list-decimal space-y-1 pl-4 text-sm text-muted">
               <li>Scan the QR code with your authenticator app.</li>
-              <li>Or enter this key manually: <code className="num block break-all text-xs text-silver">{setup.secret}</code></li>
+              <li>Or enter this key manually: <code className="num block break-all text-xs text-fg-2">{setup.secret}</code></li>
               <li>Enter the 6-digit code to confirm.</li>
             </ol>
             {enable.error && <Alert tone="loss">{enable.error}</Alert>}
@@ -141,13 +140,13 @@ export function SessionsList({ endpoint, sessions, currentId }: { endpoint: stri
   }
   return (
     <div>
-      <ul className="divide-y divide-white/[0.05]">
+      <ul className="divide-y divide-fg/[0.05]">
         {sessions.map((s) => (
           <li key={s.id} className="flex items-center gap-4 py-3.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-mute">{/Mobile|iPhone|Android/.test(s.userAgent ?? '') ? <Smartphone className="size-4" /> : <Laptop className="size-4" />}</span>
+            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-fg/[0.04] text-muted">{/Mobile|iPhone|Android/.test(s.userAgent ?? '') ? <Smartphone className="size-4" /> : <Laptop className="size-4" />}</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm">{device(s.userAgent)} {s.id === currentId && <Badge tone="gain" className="ml-1">This device</Badge>}</p>
-              <p className="text-[11px] text-dim">{s.ip ?? 'unknown IP'} · active {relTime(s.lastSeenAt)}</p>
+              <p className="text-[11px] text-faint">{s.ip ?? 'unknown IP'} · active <RelTime date={s.lastSeenAt} /></p>
             </div>
             {s.id !== currentId && <Button size="sm" variant="ghost" loading={busy === s.id} onClick={() => revoke({ sessionId: s.id }, s.id)}>Sign out</Button>}
           </li>

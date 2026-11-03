@@ -24,7 +24,7 @@ export default async function WithdrawalsPage() {
   const pendingTotal = pending.reduce((a, p) => a + Number(p.amount), 0)
   return (
     <>
-      <PageHeader eyebrow="Operations" title="Withdrawal requests" description="Approve or reject simulated withdrawals. Every decision is recorded with the reviewer, note and timestamp." />
+      <PageHeader title="Withdrawal requests" description="Approve or reject simulated withdrawals. Every decision is recorded with the reviewer, note and timestamp." />
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Awaiting review" value={String(pending.length)} sub={usdFmt(pendingTotal)} />
         <Stat label="Oldest request" value={pending[0] ? relTime(pending[0].createdAt) : '—'} sub={pending[0]?.reference ?? 'Queue clear'} />
@@ -36,20 +36,20 @@ export default async function WithdrawalsPage() {
         {pending.length === 0 ? (
           <EmptyState icon={<ArrowUpFromLine className="size-5" />} title="No pending withdrawals" />
         ) : (
-          <ul className="mt-3 divide-y divide-white/[0.05]">
+          <ul className="mt-3 divide-y divide-fg/[0.05]">
             {pending.map((w) => (
               <li key={w.id} className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="num text-xl">{usdFmt(Number(w.amount))}</p>
-                    <span className="num text-xs text-dim">{w.reference}</span>
+                    <span className="num text-xs text-faint">{w.reference}</span>
                     {w.user.flagged && <span className="inline-flex items-center gap-1 text-[11px] text-warn"><Flag className="size-3" /> Customer flagged</span>}
-                    {w.isSeed && <span className="rounded bg-white/[0.06] px-1.5 font-mono text-[9px] text-dim uppercase">demo</span>}
+                    {w.isSeed && <span className="rounded bg-fg/[0.06] px-1.5 font-mono text-[9px] text-faint uppercase">demo</span>}
                   </div>
-                  <p className="mt-1 text-sm text-mute">
-                    <Link href={`/admin/customers/${w.user.id}`} className="text-silver hover:underline">{w.user.firstName} {w.user.lastName}</Link> · {w.user.email} · KYC {w.user.kyc?.status.toLowerCase()} · remaining cash {usdFmt(Number(w.user.account?.cashBalance ?? 0))}
+                  <p className="mt-1 text-sm text-muted">
+                    <Link href={`/admin/customers/${w.user.id}`} className="text-fg-2 hover:underline">{w.user.firstName} {w.user.lastName}</Link> · {w.user.email} · KYC {w.user.kyc?.status.toLowerCase()} · remaining cash {usdFmt(Number(w.user.account?.cashBalance ?? 0))}
                   </p>
-                  <p className="mt-1 text-[11px] text-dim">Requested {dateTimeFmt(w.createdAt)} ({relTime(w.createdAt)}){w.customerNote ? ` · “${w.customerNote}”` : ''}</p>
+                  <p className="mt-1 text-[11px] text-faint">Requested {dateTimeFmt(w.createdAt)} ({relTime(w.createdAt)}){w.customerNote ? ` · “${w.customerNote}”` : ''}</p>
                 </div>
                 <ReviewButtons kind="withdrawal" endpoint={`/api/admin/withdrawals/${w.id}`} subject={`${usdFmt(Number(w.amount))} for ${w.user.firstName} ${w.user.lastName} (${w.reference})`} />
               </li>
@@ -60,18 +60,18 @@ export default async function WithdrawalsPage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_420px]">
         <Card>
-          <CardHeader title="Recent decisions" action={<Link href="/admin/transactions?type=WITHDRAWAL" className="text-xs text-mute hover:text-white">All withdrawals →</Link>} />
+          <CardHeader title="Recent decisions" action={<Link href="/admin/transactions?type=WITHDRAWAL" className="text-xs text-muted hover:text-fg">All withdrawals →</Link>} />
           <Table className="mt-3">
-            <thead className="border-b border-white/[0.06]"><tr><th className={th}>Reference</th><th className={th}>Customer</th><th className={cn(th, 'text-right')}>Amount</th><th className={th}>Status</th><th className={th}>Reviewer</th><th className={th}>Note</th></tr></thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <thead className="border-b border-fg/[0.06]"><tr><th className={th}>Reference</th><th className={th}>Customer</th><th className={cn(th, 'text-right')}>Amount</th><th className={th}>Status</th><th className={th}>Reviewer</th><th className={th}>Note</th></tr></thead>
+            <tbody className="divide-y divide-fg/[0.04]">
               {history.rows.filter((r) => r.status !== 'PENDING').map((r) => (
-                <tr key={r.id} className="hover:bg-white/[0.02]">
-                  <td className={td}><Link href={`/admin/transactions/${r.id}`} className="num text-xs text-silver hover:underline">{r.reference}</Link></td>
+                <tr key={r.id} className="hover:bg-fg/[0.02]">
+                  <td className={td}><Link href={`/admin/transactions/${r.id}`} className="num text-xs text-fg-2 hover:underline">{r.reference}</Link></td>
                   <td className={cn(td, 'text-sm')}>{r.user.firstName} {r.user.lastName}</td>
                   <td className={cn(td, 'num text-right text-sm')}>{usdFmt(r.amount)}</td>
                   <td className={td}><StatusBadge status={r.status} /></td>
-                  <td className={cn(td, 'text-xs text-mute')}>{r.reviewerEmail ?? (r.status === 'CANCELLED' ? 'Customer' : 'seed')}</td>
-                  <td className={cn(td, 'max-w-48 truncate text-xs text-mute')}>{r.adminNote ?? '—'}</td>
+                  <td className={cn(td, 'text-xs text-muted')}>{r.reviewerEmail ?? (r.status === 'CANCELLED' ? 'Customer' : 'seed')}</td>
+                  <td className={cn(td, 'max-w-48 truncate text-xs text-muted')}>{r.adminNote ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -84,10 +84,10 @@ export default async function WithdrawalsPage() {
               {trail.map((a) => {
                 const meta = (a.metadata ?? {}) as { reference?: string; amount?: number; note?: string }
                 return (
-                  <li key={a.id} className="border-l-2 border-white/10 pl-3">
-                    <p className={cn('num text-xs', a.action.endsWith('approved') ? 'text-gain' : a.action.endsWith('rejected') ? 'text-loss' : 'text-white')}>{a.action}</p>
-                    <p className="text-[11px] text-mute">{meta.reference ?? a.targetId}{meta.amount ? ` · ${usdFmt(meta.amount)}` : ''}{meta.note ? ` · “${meta.note}”` : ''}</p>
-                    <p className="text-[10px] text-dim">{a.actorEmail ?? 'system'} · {dateTimeFmt(a.createdAt)}</p>
+                  <li key={a.id} className="border-l-2 border-fg/10 pl-3">
+                    <p className={cn('num text-xs', a.action.endsWith('approved') ? 'text-gain' : a.action.endsWith('rejected') ? 'text-loss' : 'text-fg')}>{a.action}</p>
+                    <p className="text-[11px] text-muted">{meta.reference ?? a.targetId}{meta.amount ? ` · ${usdFmt(meta.amount)}` : ''}{meta.note ? ` · “${meta.note}”` : ''}</p>
+                    <p className="text-[10px] text-faint">{a.actorEmail ?? 'system'} · {dateTimeFmt(a.createdAt)}</p>
                   </li>
                 )
               })}

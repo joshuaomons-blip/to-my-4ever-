@@ -35,7 +35,7 @@ export function StatementForm({ since }: { since: string }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `sandbox-${kind}-${from}_${to}.pdf`
+      a.download = `statement-${kind}-${from}_${to}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -55,18 +55,18 @@ export function StatementForm({ since }: { since: string }) {
           ['summary', FileBarChart, 'Portfolio summary', 'Balances, holdings, P/L and period activity'],
           ['transactions', FileText, 'Transaction report', 'Itemised list of every transaction in the period'],
         ] as const).map(([k, Icon, title, sub]) => (
-          <button key={k} type="button" onClick={() => setKind(k)} className={cn('flex gap-4 rounded-2xl border p-5 text-left transition-all', kind === k ? 'border-accent/50 bg-accent/[0.05]' : 'border-white/[0.08] hover:border-white/15')}>
-            <Icon className={cn('size-5 shrink-0', kind === k ? 'text-accent' : 'text-mute')} />
+          <button key={k} type="button" onClick={() => setKind(k)} className={cn('flex gap-4 rounded-lg border p-5 text-left transition-all', kind === k ? 'border-accent/50 bg-accent/[0.05]' : 'border-fg/[0.08] hover:border-fg/15')}>
+            <Icon className={cn('size-5 shrink-0', kind === k ? 'text-accent' : 'text-muted')} />
             <span>
               <span className="block text-sm font-medium">{title}</span>
-              <span className="mt-1 block text-xs text-mute">{sub}</span>
+              <span className="mt-1 block text-xs text-muted">{sub}</span>
             </span>
           </button>
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
         {presets.map(([label, f, t]) => (
-          <button key={label} type="button" onClick={() => { setFrom(f); setTo(t) }} className={cn('rounded-full border px-3 py-1 text-xs transition-colors', from === f && to === t ? 'border-white bg-white text-ink' : 'border-white/[0.08] text-mute hover:text-white')}>{label}</button>
+          <button key={label} type="button" onClick={() => { setFrom(f); setTo(t) }} className={cn('rounded-full border px-3 py-1 text-xs transition-colors', from === f && to === t ? 'border-fg bg-fg text-white' : 'border-fg/[0.08] text-muted hover:text-fg')}>{label}</button>
         ))}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
